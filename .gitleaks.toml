@@ -1,0 +1,7 @@
+# Supabase publishable (anon) keys are public by design and protected by RLS.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public client keys"
+regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']

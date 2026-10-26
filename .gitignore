@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+coverage
+.vercel
+supabase/.temp
+supabase/.branches
+.env*
+!.env.example
+*.local
+.DS_Store
+playwright-report
+test-results
+.claude

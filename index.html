@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f1f5ff" />
+    <meta name="description" content="Track goals and deadlines across work, business, investment and personal development." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Progress Tracker</title>
+    <script>
+      // Set the theme before first paint so there is no flash of the wrong theme.
+      // Must stay in step with src/lib/theme/theme.ts (STORAGE_KEY, theme-color values).
+      (function () {
+        var pref = 'system';
+        try {
+          var saved = localStorage.getItem('pt-theme');
+          if (saved === 'light' || saved === 'dark' || saved === 'system') pref = saved;
+        } catch (e) {}
+        var dark =
+          pref === 'dark' ||
+          (pref === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+        var theme = dark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', dark ? '#0b1120' : '#f1f5ff');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
