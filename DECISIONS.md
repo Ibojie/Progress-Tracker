@@ -67,6 +67,21 @@ The first migration was already live, so fixes are in a second migration, `20261
 - **Supabase redirect URLs:** localhost, every preview link (`https://*-ibojie-celestines-projects.vercel.app/auth/callback`) and production.
 - **Email limit:** Supabase's built-in email sender allows only 2 sign-in emails per hour. Connecting Resend as a custom email sender (planned for Phase 5) lifts that.
 
+## Phase 2: core CRUD and engine
+
+### Status engine (`src/lib/engine`)
+- **Dates are calendar days ('YYYY-MM-DD') in the user's timezone.** "Today" comes from `todayIn(timezone)` (default Africa/Lagos), so midnight is Lagos midnight, not UTC.
+- **Overdue countdown:** a goal is overdue on days 1–7 after its due date, and "X days to abandonment" is `7 − days overdue`. So 3 days overdue shows "4 days to abandonment" (acceptance test 4), and day 7 shows 0. It is abandoned from day 8.
+- **Start-date rules (spec v1.2, owner request):**
+  - An element's start date is its earliest goal start date.
+  - At 0%: Not Started before that date, Started automatically from it, and Resource Delay only if the user picks it after the start date.
+  - The stored `zero_progress_status` value `not_started` is now just "no Resource Delay chosen", so no schema change was needed.
+- **"No goal has changed since" (Restarted / Recommissioned)** means no tick-box change since that time, using `goals.tick_changed_at`. Editing a title or date doesn't end those states; only a tick does (§4.1).
+- **An element with no goals** (impossible in the database, handled for safety) is treated as Started at 0%.
+- **Readable text on colours:** near-black (`#0F172A`) or white, whichever contrasts more. On a few mid-tones neither reaches 4.5:1 (for example red at 3 days left, and the Recommissioned blue `#0284C7`). There, pure black is used, which always passes. A test checks every day from −10 to 120 in both themes, plus all nine status pills.
+- **Dark-mode band colours:** the far edge of each band is a dark tint (`#1E2430`, `#0F1D36`, `#2A1E08`, `#2C1311`). The deep near-edge colours are the same as in light mode.
+- **Coverage:** CI runs `npm run test:coverage`, which fails if `src/lib/engine` drops below 90% on lines, branches, functions or statements.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).
