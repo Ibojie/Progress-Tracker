@@ -105,6 +105,21 @@ The first migration was already live, so fixes are in a second migration, `20261
 - **Deferred to Phase 3 (charts):** the element burndown chart (§6.3, chart 8) is built with the other ECharts charts.
 - **Deferred to Phase 7 (polish):** the tick animation and the confetti at 100%.
 
+### Code review fixes (independent reviewer, before merging Phase 2)
+The database fixes are in migration `20261026000300_phase2_review_fixes.sql`.
+
+1. **Edit goal / Add goal / Edit element boxes now open with the right values.** Before, Edit goal opened blank, and saving could overwrite a goal's dates. The boxes are now created fresh each time they open.
+2. **The status history only records confirmed changes.** It waits while a tick is still saving and while data is reloading, so a failed save can't leave phantom history rows.
+3. **Switch-off and switch-on times come from the server clock**, which also stamps tick times, so "Recommissioned" ends reliably even if the device clock is wrong. The app may now only write an element's name, description, 0% status, on/off switch and position.
+4. **The History card updates straight after a change.**
+5. **History logging waits until the user's own timezone has loaded**, so it never briefly uses Lagos time for someone elsewhere.
+6. **The same status can't be logged twice in a row**, even from two tabs or devices at once. The database skips the repeat.
+7. **Wizard error messages stay on the right goal** after one is removed.
+8. **Reordering goals happens in one database step** (`swap_goal_order`), so it can't be left half done.
+9. **Hardening from earlier phases:**
+   - The timezone must be a real timezone name.
+   - Date-reset history can only be written by `reset_goal_date`, never directly by the app.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).
