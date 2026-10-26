@@ -21,6 +21,7 @@ export default {
         primary: { DEFAULT: token('primary'), foreground: token('primary-fg') },
         accent: { DEFAULT: token('accent'), foreground: token('accent-fg') },
         destructive: { DEFAULT: token('danger'), foreground: token('danger-fg') },
+        done: token('done'),
       },
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],

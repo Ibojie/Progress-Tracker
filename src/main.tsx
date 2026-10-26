@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { ThemeProvider } from '@/lib/theme/ThemeProvider';
+import { NoticeProvider } from '@/components/Notice';
 import './styles/index.css';
 
 const queryClient = new QueryClient({
@@ -15,7 +16,9 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <App />
+          <NoticeProvider>
+            <App />
+          </NoticeProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
