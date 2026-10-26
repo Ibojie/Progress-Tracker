@@ -196,4 +196,62 @@ describe('notification log', () => {
     await db.query(insert, [USER_A, goal.rows[0]!.id]);
     await expect(db.query(insert, [USER_A, goal.rows[0]!.id])).rejects.toThrow(/notification_log_no_duplicates/);
   });
+
+  it('a user-level alert (weekly digest) is tracked per user', async () => {
+    const insert = `insert into notification_log (user_id, kind, channel) values ($1, 'weekly_digest', 'email')`;
+    await db.query(insert, [USER_A]);
+    await db.query(insert, [USER_B]);
+    await expect(db.query(insert, [USER_A])).rejects.toThrow(/notification_log_no_duplicates/);
+  });
+});
+
+describe('code review hardening', () => {
+  async function goalOf(userId: string): Promise<string> {
+    const elementId = await createElement(userId, 1);
+    const goal = await asUser(userId, (q) => q<{ id: string }>(`select id from goals where element_id = $1`, [elementId]));
+    return goal.rows[0]!.id;
+  }
+
+  it('a date reset cannot point at another user’s goal', async () => {
+    const aGoal = await goalOf(USER_A);
+    await expect(
+      asUser(USER_B, (q) =>
+        q(`insert into goal_date_resets (goal_id, old_due_date, new_due_date) values ($1, '2026-12-01', '2027-01-01')`, [aGoal]),
+      ),
+    ).rejects.toThrow(/goal_date_resets_goal_owner_fkey/);
+  });
+
+  it('the client cannot rewrite a goal’s bookkeeping columns', async () => {
+    const goalId = await goalOf(USER_A);
+    for (const column of [`original_due_date = '2030-01-01'`, 'reset_count = 99', `tick_changed_at = now()`, 'done_at = now()']) {
+      await expect(asUser(USER_A, (q) => q(`update goals set ${column} where id = $1`, [goalId]))).rejects.toThrow(
+        /permission denied/,
+      );
+    }
+    await expect(
+      asUser(USER_A, (q) =>
+        q(`insert into goals (element_id, title, start_date, due_date, reset_count) select element_id, 'x', start_date, due_date, 5 from goals where id = $1`, [goalId]),
+      ),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it('the client can still edit and tick its goals', async () => {
+    const goalId = await goalOf(USER_A);
+    const row = await asUser(USER_A, async (q) => {
+      await q(`update goals set title = 'Renamed', due_date = '2026-12-20', is_done = true where id = $1`, [goalId]);
+      return (await q<{ title: string; is_done: boolean }>(`select title, is_done from goals where id = $1`, [goalId])).rows[0]!;
+    });
+    expect(row).toEqual({ title: 'Renamed', is_done: true });
+  });
+
+  it('signed-out visitors cannot run database functions, including ones added later', async () => {
+    await db.exec(`create function public.later_fn() returns int language sql as 'select 1'; create table public.later_table (id int);`);
+    const priv = await db.query<{ fn: boolean; later_fn: boolean; later_table: boolean; auth_fn: boolean }>(`
+      select has_function_privilege('anon', 'public.assert_element_has_goals(uuid)', 'execute') as fn,
+             has_function_privilege('anon', 'public.later_fn()', 'execute') as later_fn,
+             has_table_privilege('anon', 'public.later_table', 'select') as later_table,
+             has_function_privilege('authenticated', 'public.later_fn()', 'execute') as auth_fn`);
+    expect(priv.rows[0]).toEqual({ fn: false, later_fn: false, later_table: false, auth_fn: true });
+    await db.exec(`drop function public.later_fn(); drop table public.later_table;`);
+  });
 });
