@@ -15,7 +15,7 @@ import {
 } from '../chartData';
 import type { DashboardData } from '../useDashboard';
 import { ChartCard } from './ChartCard';
-import { axisStyle, baseOption, useChartTheme, type ChartTheme } from './chartTheme';
+import { axisStyle, baseOption, chartLabel, useChartTheme, type ChartTheme } from './chartTheme';
 
 const short = (d: string) => formatDate(d).replace(/ \d{4}$/, '');
 
@@ -24,7 +24,7 @@ function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
   const navigate = useNavigate();
   const overall = data.kpis.find((k) => k.key === 'completion')?.value ?? 0;
   const items = [
-    ...data.categories.map((c, i) => ({ name: c.name, value: c.pct, color: t.categories[i % 4]!, key: c.key as string | null })),
+    ...data.categories.map((c, i) => ({ name: chartLabel(c.name), value: c.pct, color: t.categories[i % 4]!, key: c.key as string | null })),
     { name: 'Overall', value: overall, color: t.text, key: null },
   ];
   const option = {
@@ -60,7 +60,7 @@ function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
         const key = items.find((it) => it.name === p.seriesName)?.key;
         if (key) navigate(`/categories/${key}`);
       }}
-      table={{ columns: ['Area', '% complete'], rows: items.map((it) => [it.name, `${it.value}%`]) }}
+      table={{ columns: ['Area', '% complete'], rows: [...data.categories.map((c) => [c.name, `${c.pct}%`]), ['Overall', `${overall}%`]] }}
     />
   );
 }
@@ -73,7 +73,7 @@ function CompletedBars({ data, t }: { data: DashboardData; t: ChartTheme }) {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', data: rows.map((r) => r.name), ...axisStyle(t), splitLine: { show: false } },
+    xAxis: { type: 'category', data: rows.map((r) => chartLabel(r.name)), ...axisStyle(t), splitLine: { show: false } },
     yAxis: { type: 'value', minInterval: 1, ...axisStyle(t) },
     series: [
       { name: data.label.current, type: 'bar', data: rows.map((r) => r.current), itemStyle: { color: t.current, borderRadius: [4, 4, 0, 0] }, barGap: '10%' },
@@ -86,7 +86,7 @@ function CompletedBars({ data, t }: { data: DashboardData; t: ChartTheme }) {
       question="Am I doing more or less than before?"
       option={option}
       onClick={(p) => {
-        const row = rows.find((r) => r.name === p.name);
+        const row = rows.find((r) => chartLabel(r.name) === p.name);
         if (row) navigate(`/categories/${row.key}`);
       }}
       table={{ columns: ['Area', data.label.current, `Same point ${data.label.previous}`], rows: rows.map((r) => [r.name, r.current, r.previous]) }}
@@ -137,7 +137,7 @@ function StatusMixChart({ data, t }: { data: DashboardData; t: ChartTheme }) {
     tooltip: { ...baseOption(t).tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 8, right: 16, top: mix.statuses.length > 3 ? 72 : 40, bottom: 8, containLabel: true },
     xAxis: { type: 'value', minInterval: 1, ...axisStyle(t) },
-    yAxis: { type: 'category', data: mix.rows.map((r) => r.name), inverse: true, ...axisStyle(t), splitLine: { show: false } },
+    yAxis: { type: 'category', data: mix.rows.map((r) => chartLabel(r.name)), inverse: true, ...axisStyle(t), splitLine: { show: false } },
     series: mix.statuses.map((s) => ({
       name: STATUS_META[s].label,
       type: 'bar',
@@ -154,7 +154,7 @@ function StatusMixChart({ data, t }: { data: DashboardData; t: ChartTheme }) {
       option={option}
       empty={mix.statuses.length === 0 ? 'Add elements to see their statuses here.' : null}
       onClick={(p) => {
-        const row = mix.rows.find((r) => r.name === p.name);
+        const row = mix.rows.find((r) => chartLabel(r.name) === p.name);
         const status = mix.statuses.find((s) => STATUS_META[s].label === p.seriesName);
         if (row) navigate(`/categories/${row.key}${status ? `?status=${status}` : ''}`);
       }}
@@ -170,7 +170,7 @@ function Balance({ data, t }: { data: DashboardData; t: ChartTheme }) {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'item' },
     radar: {
-      indicator: data.categories.map((c) => ({ name: c.name, max: 100 })),
+      indicator: data.categories.map((c) => ({ name: chartLabel(c.name), max: 100 })),
       radius: '62%',
       center: ['50%', '58%'],
       axisName: { color: t.text, fontSize: t.axisFontSize },

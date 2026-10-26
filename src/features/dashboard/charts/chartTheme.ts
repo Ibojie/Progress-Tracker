@@ -84,3 +84,10 @@ export function axisStyle(t: ChartTheme) {
     splitLine: { lineStyle: { color: t.grid } },
   };
 }
+
+const SHORT_LABEL: Record<string, string> = { 'Personal Development': 'Personal Dev.' };
+
+/** Shorter area names where a chart has little room (owner request). Tables keep the full name. */
+export function chartLabel(name: string): string {
+  return SHORT_LABEL[name] ?? name;
+}
