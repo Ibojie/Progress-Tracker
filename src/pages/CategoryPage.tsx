@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/PagePlaceholder';
 import { buttonVariants } from '@/components/ui/button';
@@ -29,8 +29,16 @@ export function CategoryPage() {
   const { views, isLoading, error } = useElementViews();
   const category = categories.data?.find((c) => c.key === key);
 
-  const [status, setStatus] = useState<ElementStatus | 'all'>('all');
-  const [band, setBand] = useState<Band | 'all'>('all');
+  // Charts link here with ?status= or ?band= to open the matching elements (§8).
+  const [params] = useSearchParams();
+  const [status, setStatus] = useState<ElementStatus | 'all'>(() => {
+    const s = params.get('status');
+    return s && s in STATUS_META ? (s as ElementStatus) : 'all';
+  });
+  const [band, setBand] = useState<Band | 'all'>(() => {
+    const b = params.get('band');
+    return b && (BANDS as string[]).includes(b) ? (b as Band) : 'all';
+  });
   const [showCompleted, setShowCompleted] = useState(true);
   const [sort, setSort] = useState<SortKey>('due');
 

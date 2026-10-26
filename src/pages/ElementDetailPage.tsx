@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -30,6 +30,8 @@ import { formatDate, toEngineElement, toEngineGoal, type ElementView, type GoalV
 import { MAX_GOALS, elementInputSchema, fieldErrors, type GoalInput } from '@/features/elements/schemas';
 import { STATUS_META, addDays, zeroProgressControl, type ZeroProgressStatus } from '@/lib/engine';
 import { cn } from '@/lib/utils';
+
+const ElementBurndown = lazy(() => import('@/features/dashboard/charts/ElementBurndown'));
 
 export function ElementDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -179,6 +181,14 @@ function ElementDetail({ view }: { view: ElementView }) {
           ))}
         </ol>
       </section>
+
+      {!decommissioned && (
+        <div className="mb-8">
+          <Suspense fallback={<p role="status">Loading chart…</p>}>
+            <ElementBurndown view={view} />
+          </Suspense>
+        </div>
+      )}
 
       <Card className="mb-8">
         <CardHeader>
