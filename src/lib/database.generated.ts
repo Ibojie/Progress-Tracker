@@ -73,30 +73,39 @@ export type Database = {
       }
       daily_snapshots: {
         Row: {
+          abandoned_count: number
           category_id: string
+          due_soon_count: number
           element_id: string
           goals_done: number
           goals_total: number
+          overdue_count: number
           pct_complete: number
           snapshot_date: string
           status: Database["public"]["Enums"]["element_status"]
           user_id: string
         }
         Insert: {
+          abandoned_count?: number
           category_id: string
+          due_soon_count?: number
           element_id: string
           goals_done: number
           goals_total: number
+          overdue_count?: number
           pct_complete: number
           snapshot_date: string
           status: Database["public"]["Enums"]["element_status"]
           user_id: string
         }
         Update: {
+          abandoned_count?: number
           category_id?: string
+          due_soon_count?: number
           element_id?: string
           goals_done?: number
           goals_total?: number
+          overdue_count?: number
           pct_complete?: number
           snapshot_date?: string
           status?: Database["public"]["Enums"]["element_status"]
@@ -457,6 +466,18 @@ export type Database = {
         }
         Returns: string
       }
+      engine_element_status: {
+        Args: { p_element_id: string; p_today: string }
+        Returns: {
+          abandoned: number
+          due_soon: number
+          goals_done: number
+          goals_total: number
+          overdue: number
+          pct: number
+          status: Database["public"]["Enums"]["element_status"]
+        }[]
+      }
       reset_goal_date: {
         Args: {
           p_goal_id: string
@@ -470,6 +491,7 @@ export type Database = {
         Args: { p_goal_a: string; p_goal_b: string }
         Returns: undefined
       }
+      take_daily_snapshots: { Args: { p_now?: string }; Returns: number }
     }
     Enums: {
       category_key:
