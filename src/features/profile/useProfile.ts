@@ -24,3 +24,9 @@ export function useTimezone(): string {
 export function useToday(): string {
   return todayIn(useTimezone());
 }
+
+/** Today, plus whether the user's own timezone has loaded (until then it's Lagos). */
+export function useTodayState(): { today: string; ready: boolean } {
+  const profile = useProfile();
+  return { today: todayIn(profile.data?.timezone ?? DEFAULT_TIMEZONE), ready: profile.isSuccess };
+}

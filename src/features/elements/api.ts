@@ -1,15 +1,16 @@
 import { useEffect, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useIsMutating, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { statusChange, type ElementStatus } from '@/lib/engine';
 import type { GoalRow, Json } from '@/lib/database.types';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { useToday } from '@/features/profile/useProfile';
+import { useTodayState } from '@/features/profile/useProfile';
 import { useNotice } from '@/components/Notice';
 import { buildElementView, type ElementView, type ElementWithGoals } from './model';
 import type { GoalInput } from './schemas';
 
 const ELEMENT_SELECT = '*, goals(*), category:categories(id, key, name), status_events(to_status, created_at)';
+const TOGGLE_GOAL_KEY = ['toggle-goal'] as const;
 
 function client() {
   if (!supabase) throw new Error('Supabase is not configured.');
@@ -43,9 +44,11 @@ export function useElementRows() {
 /** Element views for today, with status changes written to the history as they happen. */
 export function useElementViews() {
   const query = useElementRows();
-  const today = useToday();
+  const { today, ready } = useTodayState();
   const views = useMemo(() => (query.data ?? []).map((row) => buildElementView(row, today)), [query.data, today]);
-  useStatusSync(views);
+  // Log only what the server has confirmed (no tick still saving) and only in the user's own timezone.
+  const ticksSaving = useIsMutating({ mutationKey: TOGGLE_GOAL_KEY });
+  useStatusSync(views, ready && ticksSaving === 0 && !query.isFetching);
   return { ...query, views };
 }
 
@@ -57,9 +60,10 @@ const loggedStatus = new Map<string, ElementStatus>();
  * recorded (§4.2). This also catches date-driven changes, such as Not Started → Started on the
  * start date, the next time the app is opened.
  */
-function useStatusSync(views: ElementView[]) {
+function useStatusSync(views: ElementView[], enabled: boolean) {
+  const queryClient = useQueryClient();
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !enabled) return;
     const rows: { element_id: string; from_status: ElementStatus | null; to_status: ElementStatus }[] = [];
     for (const v of views) {
       const previous = loggedStatus.get(v.row.id) ?? v.lastLoggedStatus;
@@ -74,9 +78,14 @@ function useStatusSync(views: ElementView[]) {
         .insert(rows)
         .then(({ error }) => {
           if (error) rows.forEach((r) => loggedStatus.delete(r.element_id)); // retry on the next render
+          else refreshHistory(queryClient);
         });
     }
-  }, [views]);
+  }, [views, enabled, queryClient]);
+}
+
+function refreshHistory(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({ queryKey: ['element-history'] });
 }
 
 export function useElementHistory(elementId: string | undefined) {
@@ -142,6 +151,7 @@ export function useToggleGoal() {
   const key = useElementsKey();
   const { notify } = useNotice();
   return useMutation({
+    mutationKey: TOGGLE_GOAL_KEY,
     mutationFn: async ({ goalId, isDone }: { goalId: string; isDone: boolean }) => {
       check(await client().from('goals').update({ is_done: isDone }).eq('id', goalId));
     },
@@ -164,7 +174,10 @@ export function useToggleGoal() {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
       notify(`Couldn’t save the tick. ${error.message}`);
     },
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: ['elements'] }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['elements'] });
+      refreshHistory(queryClient);
+    },
   });
 }
 
@@ -175,12 +188,7 @@ export function useUpdateElement() {
       patch,
     }: {
       id: string;
-      patch: Partial<
-        Pick<
-          ElementWithGoals,
-          'name' | 'description' | 'zero_progress_status' | 'is_decommissioned' | 'decommissioned_at' | 'recommissioned_at'
-        >
-      >;
+      patch: Partial<Pick<ElementWithGoals, 'name' | 'description' | 'zero_progress_status' | 'is_decommissioned'>>;
     }) => {
       check(await client().from('elements').update(patch).eq('id', id));
     },
@@ -188,21 +196,16 @@ export function useUpdateElement() {
   );
 }
 
-/** Switch an element off (hidden everywhere) or back on (§4.5). History is kept either way. */
+/**
+ * Switch an element off (hidden everywhere) or back on (§4.5). History is kept either way.
+ * The database stamps decommissioned_at / recommissioned_at with its own clock.
+ */
 export function useSetDecommissioned() {
   const update = useUpdateElement();
   return {
     ...update,
     mutate: (id: string, off: boolean, opts?: { onSuccess?: () => void }) =>
-      update.mutate(
-        {
-          id,
-          patch: off
-            ? { is_decommissioned: true, decommissioned_at: new Date().toISOString() }
-            : { is_decommissioned: false, recommissioned_at: new Date().toISOString() },
-        },
-        opts,
-      ),
+      update.mutate({ id, patch: { is_decommissioned: off } }, opts),
   };
 }
 
@@ -244,14 +247,10 @@ export function useDeleteGoal() {
   }, 'Couldn’t delete the goal.');
 }
 
-/** Swap two goals' positions. */
+/** Swap two goals' positions in one database transaction. */
 export function useSwapGoals() {
-  return useAppMutation(async ({ a, b }: { a: GoalRow; b: GoalRow }) => {
-    const db = client();
-    // Distinct positions even if both shared one before.
-    const [first, second] = a.sort_order === b.sort_order ? [b.sort_order + 1, a.sort_order] : [b.sort_order, a.sort_order];
-    check(await db.from('goals').update({ sort_order: first }).eq('id', a.id));
-    check(await db.from('goals').update({ sort_order: second }).eq('id', b.id));
+  return useAppMutation(async ({ a, b }: { a: string; b: string }) => {
+    check(await client().rpc('swap_goal_order', { p_goal_a: a, p_goal_b: b }));
   }, 'Couldn’t reorder the goals.');
 }
 

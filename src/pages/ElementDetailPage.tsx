@@ -172,7 +172,7 @@ function ElementDetail({ view }: { view: ElementView }) {
               onDelete={() => setDeletingGoal(g)}
               onMove={(dir) => {
                 const other = view.goals[i + dir];
-                if (other) swap.mutate({ a: g.row, b: other.row });
+                if (other) swap.mutate({ a: g.row.id, b: other.row.id });
               }}
               onReset={() => setResettingGoal(g)}
             />
@@ -195,40 +195,45 @@ function ElementDetail({ view }: { view: ElementView }) {
         </Button>
       </div>
 
-      <ElementEditDialog
-        open={editingElement}
-        onOpenChange={setEditingElement}
-        view={view}
-        busy={updateElement.isPending}
-        onSave={(patch) => updateElement.mutate({ id: row.id, patch }, { onSuccess: () => setEditingElement(false) })}
-      />
+      {editingElement && (
+        <ElementEditDialog
+          open
+          onOpenChange={setEditingElement}
+          view={view}
+          busy={updateElement.isPending}
+          onSave={(patch) => updateElement.mutate({ id: row.id, patch }, { onSuccess: () => setEditingElement(false) })}
+        />
+      )}
 
-      <GoalEditDialog
-        open={adding}
-        onOpenChange={setAdding}
-        title="Add a goal"
-        submitLabel="Add goal"
-        initial={blankGoal(today)}
-        busy={addGoal.isPending}
-        onSubmit={(goal) =>
-          addGoal.mutate(
-            { elementId: row.id, goal, sortOrder: Math.max(-1, ...row.goals.map((g) => g.sort_order)) + 1 },
-            { onSuccess: () => setAdding(false) },
-          )
-        }
-      />
+      {adding && (
+        <GoalEditDialog
+          open
+          onOpenChange={setAdding}
+          title="Add a goal"
+          submitLabel="Add goal"
+          initial={blankGoal(today)}
+          busy={addGoal.isPending}
+          onSubmit={(goal) =>
+            addGoal.mutate(
+              { elementId: row.id, goal, sortOrder: Math.max(-1, ...row.goals.map((g) => g.sort_order)) + 1 },
+              { onSuccess: () => setAdding(false) },
+            )
+          }
+        />
+      )}
 
-      <GoalEditDialog
-        open={!!editingGoal}
-        onOpenChange={(o) => !o && setEditingGoal(null)}
-        title="Edit goal"
-        submitLabel="Save goal"
-        initial={editingGoal ? toInput(editingGoal) : blankGoal(today)}
-        busy={updateGoal.isPending}
-        onSubmit={(goal) =>
-          editingGoal && updateGoal.mutate({ goalId: editingGoal.row.id, goal }, { onSuccess: () => setEditingGoal(null) })
-        }
-      />
+      {editingGoal && (
+        <GoalEditDialog
+          key={editingGoal.row.id}
+          open
+          onOpenChange={(o) => !o && setEditingGoal(null)}
+          title="Edit goal"
+          submitLabel="Save goal"
+          initial={toInput(editingGoal)}
+          busy={updateGoal.isPending}
+          onSubmit={(goal) => updateGoal.mutate({ goalId: editingGoal.row.id, goal }, { onSuccess: () => setEditingGoal(null) })}
+        />
+      )}
 
       {resettingGoal && (
         <ResetDateDialog
@@ -372,17 +377,7 @@ function ElementEditDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (o) {
-          setName(view.row.name);
-          setDescription(view.row.description ?? '');
-          setErrors({});
-        }
-        onOpenChange(o);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>Edit element</DialogTitle>
         <div className="mt-4 grid gap-4">

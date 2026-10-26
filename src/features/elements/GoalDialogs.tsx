@@ -18,7 +18,10 @@ interface GoalEditDialogProps {
   onSubmit: (goal: GoalInput) => void;
 }
 
-/** Add or edit one goal. Validates before saving (§6.4 rules apply to edits too). */
+/**
+ * Add or edit one goal. Validates before saving (§6.4 rules apply to edits too).
+ * Render it only while open, so each opening starts from `initial`.
+ */
 export function GoalEditDialog({ open, onOpenChange, title, initial, busy, submitLabel, onSubmit }: GoalEditDialogProps) {
   const [value, setValue] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -31,16 +34,7 @@ export function GoalEditDialog({ open, onOpenChange, title, initial, busy, submi
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (o) {
-          setValue(initial);
-          setErrors({});
-        }
-        onOpenChange(o);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>{title}</DialogTitle>
         <div className="mt-4">
@@ -69,7 +63,7 @@ interface ResetDateDialogProps {
   onSubmit: (newDueDate: string, reason: string) => void;
 }
 
-/** The only way to revive an abandoned goal: a new due date after today, with an optional reason (§4.3). */
+/** The only way to revive an abandoned goal: a new due date after today, with an optional reason (§4.3). Render only while open. */
 export function ResetDateDialog({ open, onOpenChange, goalTitle, currentDue, today, busy, onSubmit }: ResetDateDialogProps) {
   const [date, setDate] = useState(addDays(today, 14));
   const [reason, setReason] = useState('');
@@ -83,17 +77,7 @@ export function ResetDateDialog({ open, onOpenChange, goalTitle, currentDue, tod
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (o) {
-          setDate(addDays(today, 14));
-          setReason('');
-          setErrors({});
-        }
-        onOpenChange(o);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>Reset the due date</DialogTitle>
         <DialogDescription>

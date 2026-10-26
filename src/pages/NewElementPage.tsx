@@ -206,7 +206,10 @@ export function NewElementPage() {
                     variant="ghost"
                     size="icon"
                     aria-label={`Remove goal ${i + 1}`}
-                    onClick={() => setGoals((gs) => gs.filter((_, j) => j !== i))}
+                    onClick={() => {
+                      setGoals((gs) => gs.filter((_, j) => j !== i));
+                      setErrors({}); // messages are keyed by position, so they'd point at the wrong goal
+                    }}
                   >
                     <Trash2 aria-hidden />
                   </Button>
