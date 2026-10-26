@@ -6,7 +6,7 @@ Where the spec was silent, the simplest robust option was chosen and listed here
 
 ### Process
 - **Lifecycle (product-dev-team skill).** The build prompt already serves as brief, PRD and architecture, so the skill's intake, discovery, spec and architecture stages are treated as done. Each phase runs design → build → test → review → owner demo. This file doubles as the skill's project log.
-- **Pull requests without the GitHub CLI.** `gh` is not installed on the build laptop, so branches are pushed with git and the owner opens each pull request from the link GitHub prints.
+- **Pull requests.** The GitHub CLI (`gh`) was installed and signed in during Phase 1. Pull requests are opened and checked with `gh`. Merges and tags happen only with the owner's go-ahead.
 
 ### Tooling
 - **Tailwind CSS 3.4, not 4.** The spec asks for `darkMode: ['class', '[data-theme="dark"]']`, which is Tailwind 3 config syntax. shadcn/ui supports both.
@@ -62,6 +62,11 @@ The first migration was already live, so fixes are in a second migration, `20261
   - A flip that failed to save (offline, say) is marked on the device and saved on the next sync, instead of being overwritten.
 - **CI checks the gitleaks download** against its published SHA-256 before running it.
 
+### Release
+- **Production address:** https://progress-tracker-phi-five.vercel.app (Vercel's default domain), set as the Supabase Site URL.
+- **Supabase redirect URLs:** localhost, every preview link (`https://*-ibojie-celestines-projects.vercel.app/auth/callback`) and production.
+- **Email limit:** Supabase's built-in email sender allows only 2 sign-in emails per hour. Connecting Resend as a custom email sender (planned for Phase 5) lifts that.
+
 ## Open questions for the owner
-- The production domain for the Supabase redirect URLs (the Vercel default domain is used until a custom domain is chosen).
+- A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).

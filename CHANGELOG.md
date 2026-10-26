@@ -2,7 +2,9 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - Phase 1: scaffold (unreleased)
+## [0.1.0] - 2026-10-26 - Phase 1: scaffold
+
+Live at https://progress-tracker-phi-five.vercel.app
 
 ### Added
 - Vite + React 18 + strict TypeScript app with Tailwind CSS and shadcn/ui-style components.
@@ -14,3 +16,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Database tests that run the migrations in an in-memory Postgres and check RLS and the goal rules.
 - GitHub Actions CI: lint, type-check, tests, build and a gitleaks secret scan.
 - README, DECISIONS, `.env.example` and a Vercel SPA rewrite.
+
+### Security (from the Phase 1 code review)
+- A date reset can only point at the user's own goal.
+- Alert de-duplication is per user, so weekly digests don't collide.
+- The app can't rewrite a goal's bookkeeping columns.
+- Signed-out visitors can't read tables or run functions, including ones added later.
+- CI verifies the secret-scanner download.
+
+### Fixed
+- A theme flip made while the profile was still loading is no longer undone, and a failed save is retried.
+- `vercel.json` now uses Vercel's supported rewrite pattern.
