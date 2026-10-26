@@ -466,6 +466,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      swap_goal_order: {
+        Args: { p_goal_a: string; p_goal_b: string }
+        Returns: undefined
+      }
     }
     Enums: {
       category_key:
