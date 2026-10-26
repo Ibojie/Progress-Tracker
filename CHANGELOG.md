@@ -2,7 +2,7 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] - Phase 2: elements, goals and the status engine
+## [0.2.0] - 2026-10-26 - Phase 2: elements, goals and the status engine
 
 ### Added
 - Status engine (`src/lib/engine`): the nine statuses and their resolution order, % complete, overdue and abandoned rules, start-date rules (spec v1.2), time bands, and OKLCH colour gradients with AA text contrast in both themes.
@@ -17,6 +17,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Settings → Archive for decommissioned (switch back on) and completed elements.
 - Database functions `create_element_with_goals` and `reset_goal_date`, and generated database types.
 - CI enforces at least 90% test coverage on the engine.
+
+### Fixed (from the Phase 2 code review)
+- Edit goal, Add goal and Edit element open with the current values.
+- Status history records only confirmed changes, refreshes straight away, waits for the user's timezone, and never logs the same status twice in a row.
+- Switch-off and switch-on times use the server clock.
+- Reordering goals is a single step.
+- Wizard error messages stay on the right goal.
+- Timezones must be real names, and reset history can only be written by `reset_goal_date`.
 
 ## [0.1.0] - 2026-10-26 - Phase 1: scaffold
 
