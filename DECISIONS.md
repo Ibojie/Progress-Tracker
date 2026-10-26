@@ -50,6 +50,18 @@ Where the spec was silent, the simplest robust option was chosen and listed here
 - **PKCE flow** for magic links and Google, returning to `/auth/callback`. A magic link has to be opened in the same browser that requested it.
 - **The client is optional:** with no Supabase env vars, the app shows a setup screen instead of crashing, so CI builds and bare previews work.
 
+### Code review fixes (independent reviewer, before merging Phase 1)
+The first migration was already live, so fixes are in a second migration, `20261026000100_harden_schema.sql`.
+
+- **Date resets can only point at your own goals.** They now use a composite foreign key, like the other tables. Before, another user could create a reset row against your goal.
+- **The no-duplicate key on alerts now includes `user_id`.** Without it, the weekly digest for one user would have blocked everyone else's that day.
+- **The app can only write a goal's own content:** title, notes, dates, tick, order. `original_due_date`, `reset_count`, `done_at` and `tick_changed_at` are set by the database: the triggers, and the date-reset function coming in Phase 2.
+- **Signed-out visitors can't run any database function or read any table, including ones added later.** This covers the default privileges, plus Postgres's global "everyone may run functions" default.
+- **Theme sync:**
+  - A flip made while the profile was still loading is no longer undone by the late answer.
+  - A flip that failed to save (offline, say) is marked on the device and saved on the next sync, instead of being overwritten.
+- **CI checks the gitleaks download** against its published SHA-256 before running it.
+
 ## Open questions for the owner
 - The production domain for the Supabase redirect URLs (the Vercel default domain is used until a custom domain is chosen).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).
