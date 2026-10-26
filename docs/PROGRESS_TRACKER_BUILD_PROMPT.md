@@ -7,7 +7,7 @@
 
 **Changes in v1.1:** added GitHub version control (§2.1), a light/dark mode switch (§10.1), and the custom skills to load (§2.2).
 
-**Changes in v1.2:** a goal or element whose start date is in the future is automatically **Not Started** (§3, §4.1, §4.2, §4.6, §6.3, §14 test 17).
+**Changes in v1.2:** at 0%, the start date now drives the status. Before an element's start date it is automatically **Not Started**; from the start date it automatically becomes **Started**, and the user can still mark it **Resource Delay** (§3, §4.1, §4.2, §4.6, §6.3, §14 tests 3 and 17).
 
 ---
 
@@ -116,8 +116,8 @@ Put all of this in **pure TypeScript functions** in `src/lib/engine/`. Make them
 
 | Status | How it is set | Colour (pill bg / text) | Notes |
 |---|---|---|---|
-| Not Started | **Manual** when 0%, or **Auto** when the element has not reached its start date (§4.6) | Slate `#64748B` | Default for a new element |
-| Started | **Manual**, only when 0% | Indigo `#4F46E5` | Started, but no goal ticked yet |
+| Not Started | **Auto** at 0% before the element's start date (§4.6) | Slate `#64748B` | Default for a new element whose start date is in the future |
+| Started | **Auto** at 0% from the element's start date (§4.6) | Indigo `#4F46E5` | Start date reached, but no goal ticked yet |
 | Resource Delay | **Manual**, only when 0% | Orange `#EA580C` | Flag in advice if it lasts more than 7 days |
 | In Progress | **Auto** at 1–99% | Cyan `#0891B2` | |
 | Completed | **Auto** at 100% | Green `#16A34A` | Completed goal items use **green text** |
@@ -137,7 +137,8 @@ A status is **always shown as a pill with its word and an icon**, never colour a
 5. If pct = 100, the status is **Completed**.
 6. If 0 < pct < 100, the status is **In Progress**.
 7. If pct = 0 and **today is before the element's start date** (the earliest `start_date` of its goals), the status is **Not Started** (§4.6).
-8. If pct = 0, use the manually chosen `zero_progress_status` (Not Started / Started / Resource Delay).
+8. If pct = 0 and the user has marked the element **Resource Delay**, the status is **Resource Delay**.
+9. Otherwise (pct = 0, start date reached), the status is **Started**.
 
 Unticking a goal re-runs the engine. For example, Completed goes back to In Progress. Every change in the resolved status writes a row to `status_events`.
 
@@ -164,10 +165,12 @@ Unticking a goal re-runs the engine. For example, Completed goes back to In Prog
 
 - A **goal** whose start date is after today (in the user's timezone) and is not done shows the display state **Not Started**. It still counts in the % denominator.
 - An **element** whose start date (the earliest `start_date` of its goals) is after today and is at 0% is **automatically Not Started**, whatever `zero_progress_status` says. Example: today is 26 October and every goal starts on 1 November, so the element shows **Not Started**.
-- While an element has not reached its start date, the manual 0% selector is **locked to Not Started** (shown but disabled, with the start date as the reason). Started and Resource Delay cannot be chosen yet.
-- From the start date onwards, the normal rules apply. The status does **not** switch to Started by itself; the user chooses it with the manual selector.
+- While an element has not reached its start date, the 0% selector is **locked to Not Started** (shown but disabled, with the start date as the reason). Started and Resource Delay cannot be chosen yet.
+- **On the start date, an element still at 0% switches to Started automatically.** No user action is needed. The switch is recorded in the status history (`status_events`), like any other status change.
+- From the start date onwards, the 0% selector offers **Started** or **Resource Delay** only. Not Started is no longer offered, because the start date has passed. Choosing Resource Delay keeps it until the user switches back to Started or ticks a goal.
+- If the user moves the goal dates so the start date is in the future again, the element goes back to **Not Started**.
 - A goal ticked before its start date counts as done as usual. Real progress outranks the calendar, so the element then follows the normal rules (for example, **In Progress**).
-- Resource Delay and Started stall checks (§7.1) count days from the later of the start date and the date the status was chosen.
+- The Started and Resource Delay stall checks (§7.1) count days from the later of the start date and the date that status began.
 
 ---
 
@@ -211,7 +214,7 @@ Use a mobile-first layout. On mobile, use a bottom tab bar (Dashboard · Categor
 - "+ New Element" button.
 
 ### 6.3 Element detail
-- Header: name, category, status pill, %, decommission toggle, and the manual status selector (shown only when the element is at 0%, and locked to Not Started until the element's start date, see §4.6).
+- Header: name, category, status pill, %, decommission toggle, and the 0% status selector. It is shown only when the element is at 0%: locked to Not Started before the start date, then offering Started or Resource Delay (see §4.6).
 - Goal checklist, with up to 10 goals. Each goal row has: tick box, title, start → due dates, band chip with "X days left", and an overdue/abandoned state. Completed goals show **green text**. Abandoned goals are **faded** and have a **"Reset date"** button.
 - A mini burndown chart for this element.
 - Status history timeline, from `status_events` and `goal_date_resets`.
@@ -347,7 +350,7 @@ Send notifications through three channels. Each can be toggled in Settings.
 
 1. Create the element "PMI 2027" with 4 goals. Tick 1 → **In Progress · 25%**. Tick all 4 → **Completed · 100%** with green goal text. Untick 1 → back to **In Progress · 75%**.
 2. An element with 2 goals and 1 ticked → **In Progress · 50%**.
-3. A new element at 0%: the user can choose Not Started, Started or Resource Delay. The selector is hidden once any goal is ticked.
+3. A new element at 0% whose start date is today or earlier → **Started** automatically, and the user can switch it to **Resource Delay** and back. The selector is hidden once any goal is ticked.
 4. A goal due 3 days ago and not ticked → red **"Overdue · 4 days to abandonment"** badge.
 5. A goal due 8 days ago and not ticked → the goal is faded as **Abandoned**. If it is the element's only open goal, the element is **Abandoned**. The % does **not** go up.
 6. Reset the date on that abandoned goal → the element shows **Restarted**. After the next tick it follows the normal rules.
@@ -361,7 +364,7 @@ Send notifications through three channels. Each can be toggled in Settings.
 14. With no Anthropic key, the app works fully and the AI card is hidden.
 15. The mode switch flips Light ↔ Dark on every screen with no flash on reload. The choice is still there after signing in on a second device. Every chart, pill, band colour and glass panel passes AA contrast in both modes.
 16. Every phase is on GitHub: a merged pull request, a green CI run, a version tag, and no secrets in the repo history.
-17. Today is 26 October. An element whose goals all start on 1 November → **Not Started** automatically, and the manual selector is locked. Each of its goals shows **Not Started**. On 1 November, with nothing ticked, the manual selector unlocks and the element keeps the user's chosen 0% status (default Not Started). Ticking a goal early → **In Progress**.
+17. Today is 26 October. An element whose goals all start on 1 November → **Not Started** automatically, the selector is locked, and each goal shows **Not Started**. On 1 November, with nothing ticked → **Started** automatically, with a Not Started → Started row in the status history. Ticking a goal early (before 1 November) → **In Progress**.
 
 ---
 
