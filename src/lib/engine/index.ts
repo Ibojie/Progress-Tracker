@@ -6,3 +6,7 @@ export * from './progress';
 export * from './status';
 export * from './bands';
 export * from './statusMeta';
+export * from './periods';
+export * from './pace';
+export * from './kpis';
+export * from './advice';
