@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComingSoon, PageHeader } from '@/components/PagePlaceholder';
 import { cn } from '@/lib/utils';
+import { Archive } from '@/features/elements/Archive';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -71,8 +72,18 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
+        <Card id="archive">
+          <CardHeader>
+            <CardTitle>Archive</CardTitle>
+            <CardDescription>Switched-off elements are hidden everywhere else. Switch one on to bring it back.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Archive />
+          </CardContent>
+        </Card>
+
         <ComingSoon phase={5}>
-          Timezone, notification channels, quiet hours, the AI summary switch, the archive and data export.
+          Timezone, notification channels, quiet hours, the AI summary switch and data export.
         </ComingSoon>
       </div>
     </>
