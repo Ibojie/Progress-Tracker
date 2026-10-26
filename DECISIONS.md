@@ -67,6 +67,59 @@ The first migration was already live, so fixes are in a second migration, `20261
 - **Supabase redirect URLs:** localhost, every preview link (`https://*-ibojie-celestines-projects.vercel.app/auth/callback`) and production.
 - **Email limit:** Supabase's built-in email sender allows only 2 sign-in emails per hour. Connecting Resend as a custom email sender (planned for Phase 5) lifts that.
 
+## Phase 2: core CRUD and engine
+
+### Status engine (`src/lib/engine`)
+- **Dates are calendar days ('YYYY-MM-DD') in the user's timezone.** "Today" comes from `todayIn(timezone)` (default Africa/Lagos), so midnight is Lagos midnight, not UTC.
+- **Overdue countdown:** a goal is overdue on days 1–7 after its due date, and "X days to abandonment" is `7 − days overdue`. So 3 days overdue shows "4 days to abandonment" (acceptance test 4), and day 7 shows 0. It is abandoned from day 8.
+- **Start-date rules (spec v1.2, owner request):**
+  - An element's start date is its earliest goal start date.
+  - At 0%: Not Started before that date, Started automatically from it, and Resource Delay only if the user picks it after the start date.
+  - The stored `zero_progress_status` value `not_started` is now just "no Resource Delay chosen", so no schema change was needed.
+- **"No goal has changed since" (Restarted / Recommissioned)** means no tick-box change since that time, using `goals.tick_changed_at`. Editing a title or date doesn't end those states; only a tick does (§4.1).
+- **An element with no goals** (impossible in the database, handled for safety) is treated as Started at 0%.
+- **Readable text on colours:** near-black (`#0F172A`) or white, whichever contrasts more. On a few mid-tones neither reaches 4.5:1 (for example red at 3 days left, and the Recommissioned blue `#0284C7`). There, pure black is used, which always passes. A test checks every day from −10 to 120 in both themes, plus all nine status pills.
+- **Dark-mode band colours:** the far edge of each band is a dark tint (`#1E2430`, `#0F1D36`, `#2A1E08`, `#2C1311`). The deep near-edge colours are the same as in light mode.
+- **Coverage:** CI runs `npm run test:coverage`, which fails if `src/lib/engine` drops below 90% on lines, branches, functions or statements.
+
+### Data and screens
+- **Database functions:**
+  - `create_element_with_goals` saves an element and its goals in one transaction, which the "at least one goal" rule needs. It runs as the user, so all security rules apply.
+  - `reset_goal_date` runs with elevated rights, because only it may raise `reset_count`. It checks ownership itself and uses the user's own "today".
+  - The engine decides whether the element was Abandoned, and the function then sets `restarted_at`.
+- **Types are generated from the live database** (`npm run db:types` → `src/lib/database.generated.ts`), so the code always matches the real tables.
+- **Loading:** all of a user's elements load in one request, with their goals, category and last status event. A personal tracker has few enough rows, and every screen then shares one cache.
+- **Status history (`status_events`):**
+  - The app writes a row whenever an element's resolved status differs from the last one recorded.
+  - That catches date-driven changes (Not Started → Started) the next time the app is opened. The nightly job in Phase 3 will catch them on days the app isn't opened.
+  - The first row for an element reads "Started tracking as …".
+- **Ticks update on screen instantly** and are rolled back with a message if the save fails.
+- **Editing a goal's due date directly** is allowed (§6.3, "edit goals"). "Reset date" is the route for abandoned goals, because it is counted and logged.
+- **Deleting:**
+  - The only goal of an element can't be deleted (the button is disabled, and the database blocks it too).
+  - Deleting a whole element is permanent and asks for confirmation. The dialog points to switching it off instead if the history should be kept.
+- **Category view:** filters for status, deadline band and show/hide completed (shown by default). Sort by nearest deadline (default), least complete, or name.
+- **Category cards** show the number of active elements and the category % (done goals ÷ all goals of active elements).
+- **Completed goal text** uses a "done" green token: `#15803D` in light mode (5:1 on white), `#4ADE80` in dark mode.
+- **Abandoned goals:** the goal's text fades to 45%, but its **Reset date** button stays at full strength so it remains readable and tappable.
+- **Deferred to Phase 3 (charts):** the element burndown chart (§6.3, chart 8) is built with the other ECharts charts.
+- **Deferred to Phase 7 (polish):** the tick animation and the confetti at 100%.
+
+### Code review fixes (independent reviewer, before merging Phase 2)
+The database fixes are in migration `20261026000300_phase2_review_fixes.sql`.
+
+1. **Edit goal / Add goal / Edit element boxes now open with the right values.** Before, Edit goal opened blank, and saving could overwrite a goal's dates. The boxes are now created fresh each time they open.
+2. **The status history only records confirmed changes.** It waits while a tick is still saving and while data is reloading, so a failed save can't leave phantom history rows.
+3. **Switch-off and switch-on times come from the server clock**, which also stamps tick times, so "Recommissioned" ends reliably even if the device clock is wrong. The app may now only write an element's name, description, 0% status, on/off switch and position.
+4. **The History card updates straight after a change.**
+5. **History logging waits until the user's own timezone has loaded**, so it never briefly uses Lagos time for someone elsewhere.
+6. **The same status can't be logged twice in a row**, even from two tabs or devices at once. The database skips the repeat.
+7. **Wizard error messages stay on the right goal** after one is removed.
+8. **Reordering goals happens in one database step** (`swap_goal_order`), so it can't be left half done.
+9. **Hardening from earlier phases:**
+   - The timezone must be a real timezone name.
+   - Date-reset history can only be written by `reset_goal_date`, never directly by the app.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).

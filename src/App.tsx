@@ -5,6 +5,8 @@ import { RequireAuth } from '@/features/auth/RequireAuth';
 import { ThemeProfileSync } from '@/features/auth/ThemeProfileSync';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
+import { CategoryPage } from '@/pages/CategoryPage';
+import { ElementDetailPage } from '@/pages/ElementDetailPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NewElementPage } from '@/pages/NewElementPage';
@@ -31,6 +33,8 @@ export function App() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="categories/:key" element={<CategoryPage />} />
+          <Route path="elements/:id" element={<ElementDetailPage />} />
           <Route path="timeline" element={<TimelinePage />} />
           <Route path="elements/new" element={<NewElementPage />} />
           <Route path="settings" element={<SettingsPage />} />

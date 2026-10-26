@@ -27,6 +27,7 @@
     --accent-fg: 255 255 255;
     --danger: 185 28 28;
     --danger-fg: 255 255 255;
+    --done: 21 128 61; /* green-700: completed goal text, 5:1 on white */
 
     /* glass (CSS tier B) */
     --glass-tint-1: rgba(255, 255, 255, 0.72);
@@ -57,6 +58,7 @@
     --accent-fg: 11 17 32;
     --danger: 248 113 113;
     --danger-fg: 11 17 32;
+    --done: 74 222 128; /* green-400 on dark surfaces */
 
     --glass-tint-1: rgba(30, 41, 59, 0.72);
     --glass-tint-2: rgba(15, 23, 42, 0.55);
