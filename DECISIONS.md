@@ -120,6 +120,47 @@ The database fixes are in migration `20261026000300_phase2_review_fixes.sql`.
    - The timezone must be a real timezone name.
    - Date-reset history can only be written by `reset_goal_date`, never directly by the app.
 
+## Phase 3: dashboard
+
+### Periods and KPIs
+- **Like-for-like comparison:** the current period runs from its start (Monday, the 1st of the month, or the quarter start) to today. It is compared with the **same stretch** of the previous period: on a Wednesday, Mon–Wed this week vs Mon–Wed last week. A custom range is compared with the same number of days just before it.
+- **KPI sources:**
+  - "Goals completed" counts completion dates (in your timezone) inside each range.
+  - Overall completion, due in 14 days, overdue and abandoned compare today's live figure with the last nightly snapshot on or before the matching day of the previous period.
+  - With no snapshot yet, the tile says "No history yet" rather than inventing a change.
+- **Good or bad direction:** a rise in completion or goals completed is good (green ▲). A rise in overdue, due-soon or abandoned is bad (red ▲). Arrows and words are shown alongside the colour.
+- **Sparklines** are plain SVG: tiny lines with no axes or hover, so ECharts would add size for nothing. Their values are in the tile's accessible label.
+
+### Nightly snapshots
+- **Where it runs:** the job runs inside the database (`pg_cron`, 22:55 UTC = 23:55 Lagos, no daylight saving) and calls `take_daily_snapshots()`. There is no Edge Function, so no secret keys are needed for it.
+- **Same rules as the app:** the status rules are mirrored in SQL (`engine_element_status`). A test compares the SQL and TypeScript versions on 300 random elements × 5 dates (1,500 cases) on every CI run.
+- **Extra snapshot columns:** `overdue_count`, `abandoned_count` and `due_soon_count`, so those KPIs have history too.
+- **What the job writes:** for each user, it uses that user's own "today", upserts one row per element (re-running is safe), and logs a status change with the reason "Nightly check". The same status is never logged twice in a row.
+- **Decommissioned elements** are snapshotted with that status, and every chart and KPI leaves them out.
+
+### Advice
+- **Focus Now strip:** overdue plus 0–14 days. The advice card's "Focus on" list extends to 29 days, as §7.1 says.
+- **Urgency score:**
+  - Overdue goals score 100 + 5 per day overdue (capped at 7 days).
+  - Other goals score 60 − 2 × days left.
+  - Add 0.3 × the goal's weight (100 / number of goals), and +10 if the element is behind pace.
+  - Within each group (overdue, 0–14, 15–29), the highest score comes first.
+- **Pace:** expected % is the average, across goals, of the share of each goal's time that has passed. "Behind pace" means more than 15 points under that.
+- **Stalls:**
+  - "No ticks" uses the newest tick time, so it fires at 14+ days.
+  - Resource Delay and Started-at-0% count from the later of the start date and when the status was recorded, and fire at more than 7 days.
+- **Wins:** elements whose last goal was completed in this period, plus the category with the biggest rise since the same point of the previous period.
+
+### Charts
+- **Colours:**
+  - Categories use the validated categorical order from the dataviz guidelines: blue `#2A78D6`, orange `#EB6834`, aqua `#1BAF7A`, yellow `#EDA100`, with their dark-mode steps.
+  - The current period is blue; the previous period is a muted grey and dashed.
+  - Status and band colours are reserved for status and band only.
+- **Accessibility:** every chart has a title, a one-line question, a tooltip, a legend for two or more series, and a **Table** switch. The drawn chart carries an accessible label pointing to the table.
+- **Clicking a chart:** gauges and bars open the category, a status-mix segment opens the category filtered by status, and a donut segment opens the Timeline filtered by band.
+- **Deadline calendar and Timeline are HTML, not ECharts,** so every day and every bar is a real, keyboard-reachable control or link. Calendar cells are 40px with 14–16px numbers, and the grid scrolls inside its own box on phones.
+- **Charts load separately:** ECharts (≈600 KB) loads only with the charts, using modular imports and the SVG renderer. The main bundle's size is left for the Phase 7 performance pass.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).
