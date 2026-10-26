@@ -255,3 +255,93 @@ describe('code review hardening', () => {
     await db.exec(`drop function public.later_fn(); drop table public.later_table;`);
   });
 });
+
+describe('create_element_with_goals', () => {
+  const goalsJson = (n: number) =>
+    JSON.stringify(Array.from({ length: n }, (_, i) => ({ title: ` Goal ${i + 1} `, start_date: '2026-10-01', due_date: '2026-12-01' })));
+
+  async function create(userId: string, n: number) {
+    return asUser(userId, async (q) => {
+      const cat = await q<{ id: string }>(`select id from categories where key = 'business'`);
+      const res = await q<{ id: string }>(`select create_element_with_goals($1, ' Naija Commerce ', '', $2::jsonb) as id`, [
+        cat.rows[0]!.id,
+        goalsJson(n),
+      ]);
+      return res.rows[0]!.id;
+    });
+  }
+
+  it('creates the element and its goals in order, trimmed', async () => {
+    const id = await create(USER_A, 3);
+    const rows = await asUser(USER_A, async (q) => ({
+      element: (await q<{ name: string; description: string | null }>(`select name, description from elements where id = $1`, [id])).rows[0],
+      goals: (await q<{ title: string; sort_order: number }>(`select title, sort_order from goals where element_id = $1 order by sort_order`, [id])).rows,
+    }));
+    expect(rows.element).toEqual({ name: 'Naija Commerce', description: null });
+    expect(rows.goals).toEqual([
+      { title: 'Goal 1', sort_order: 0 },
+      { title: 'Goal 2', sort_order: 1 },
+      { title: 'Goal 3', sort_order: 2 },
+    ]);
+  });
+
+  it('rejects 0 or 11 goals', async () => {
+    await expect(create(USER_A, 0)).rejects.toThrow(/between 1 and 10/);
+    await expect(create(USER_A, 11)).rejects.toThrow(/between 1 and 10/);
+  });
+
+  it('cannot use another user’s category', async () => {
+    const bCat = await asUser(USER_B, (q) => q<{ id: string }>(`select id from categories limit 1`));
+    await expect(
+      asUser(USER_A, (q) => q(`select create_element_with_goals($1, 'x', null, $2::jsonb)`, [bCat.rows[0]!.id, goalsJson(1)])),
+    ).rejects.toThrow();
+  });
+
+  it('signed-out visitors cannot call it', async () => {
+    await expect(asUser(null, (q) => q(`select create_element_with_goals(gen_random_uuid(), 'x', null, '[]')`))).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+});
+
+describe('reset_goal_date', () => {
+  async function abandonedGoal(userId: string) {
+    const elementId = await createElement(userId, 1);
+    // Old dates, as for a goal abandoned long ago (set as the table owner).
+    await db.query(`update goals set start_date = '2025-01-01', due_date = '2025-02-01', original_due_date = '2025-02-01' where element_id = $1`, [elementId]);
+    const goal = await db.query<{ id: string }>(`select id from goals where element_id = $1`, [elementId]);
+    return { elementId, goalId: goal.rows[0]!.id };
+  }
+
+  it('moves the due date, counts the reset, logs it and marks the element Restarted', async () => {
+    const { elementId, goalId } = await abandonedGoal(USER_A);
+    await asUser(USER_A, (q) => q(`select reset_goal_date($1, current_date + 30, ' Was ill ', true)`, [goalId]));
+    const goal = (await db.query<{ reset_count: number; original_due_date: Date }>(`select reset_count, original_due_date from goals where id = $1`, [goalId])).rows[0]!;
+    const reset = (await db.query<{ reason: string; user_id: string }>(`select reason, user_id from goal_date_resets where goal_id = $1`, [goalId])).rows;
+    const el = (await db.query<{ restarted_at: Date | null }>(`select restarted_at from elements where id = $1`, [elementId])).rows[0]!;
+    expect(goal.reset_count).toBe(1);
+    expect(goal.original_due_date.toISOString().slice(0, 10)).toBe('2025-02-01');
+    expect(reset).toEqual([{ reason: 'Was ill', user_id: USER_A }]);
+    expect(el.restarted_at).not.toBeNull();
+  });
+
+  it('requires a new due date after today', async () => {
+    const { goalId } = await abandonedGoal(USER_A);
+    await expect(asUser(USER_A, (q) => q(`select reset_goal_date($1, current_date - 1, null, false)`, [goalId]))).rejects.toThrow(
+      /after today/,
+    );
+  });
+
+  it('cannot touch another user’s goal', async () => {
+    const { goalId } = await abandonedGoal(USER_A);
+    await expect(asUser(USER_B, (q) => q(`select reset_goal_date($1, current_date + 30, null, true)`, [goalId]))).rejects.toThrow(
+      /Goal not found/,
+    );
+  });
+
+  it('signed-out visitors cannot call it', async () => {
+    await expect(asUser(null, (q) => q(`select reset_goal_date(gen_random_uuid(), current_date + 1, null, false)`))).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+});
