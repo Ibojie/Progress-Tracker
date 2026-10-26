@@ -2,6 +2,22 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] - Phase 2: elements, goals and the status engine
+
+### Added
+- Status engine (`src/lib/engine`): the nine statuses and their resolution order, % complete, overdue and abandoned rules, start-date rules (spec v1.2), time bands, and OKLCH colour gradients with AA text contrast in both themes.
+- New Element wizard: category and name, 1–10 goals with dates, review showing the starting status, plus quick templates.
+- Category view: element cards with band-coloured edge, status pill with %, progress, next goal and warnings, plus filters and sorting.
+- Element detail:
+  - Goal checklist with ticks, dates, "X days left" chips, overdue and abandoned states, and green completed goals.
+  - Add, edit, reorder and delete goals.
+  - Reset date for abandoned goals.
+  - The 0% status selector, locked before the start date.
+  - Decommission switch, status history, and edit or delete the element.
+- Settings → Archive for decommissioned (switch back on) and completed elements.
+- Database functions `create_element_with_goals` and `reset_goal_date`, and generated database types.
+- CI enforces at least 90% test coverage on the engine.
+
 ## [0.1.0] - 2026-10-26 - Phase 1: scaffold
 
 Live at https://progress-tracker-phi-five.vercel.app

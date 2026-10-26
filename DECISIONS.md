@@ -82,6 +82,29 @@ The first migration was already live, so fixes are in a second migration, `20261
 - **Dark-mode band colours:** the far edge of each band is a dark tint (`#1E2430`, `#0F1D36`, `#2A1E08`, `#2C1311`). The deep near-edge colours are the same as in light mode.
 - **Coverage:** CI runs `npm run test:coverage`, which fails if `src/lib/engine` drops below 90% on lines, branches, functions or statements.
 
+### Data and screens
+- **Database functions:**
+  - `create_element_with_goals` saves an element and its goals in one transaction, which the "at least one goal" rule needs. It runs as the user, so all security rules apply.
+  - `reset_goal_date` runs with elevated rights, because only it may raise `reset_count`. It checks ownership itself and uses the user's own "today".
+  - The engine decides whether the element was Abandoned, and the function then sets `restarted_at`.
+- **Types are generated from the live database** (`npm run db:types` → `src/lib/database.generated.ts`), so the code always matches the real tables.
+- **Loading:** all of a user's elements load in one request, with their goals, category and last status event. A personal tracker has few enough rows, and every screen then shares one cache.
+- **Status history (`status_events`):**
+  - The app writes a row whenever an element's resolved status differs from the last one recorded.
+  - That catches date-driven changes (Not Started → Started) the next time the app is opened. The nightly job in Phase 3 will catch them on days the app isn't opened.
+  - The first row for an element reads "Started tracking as …".
+- **Ticks update on screen instantly** and are rolled back with a message if the save fails.
+- **Editing a goal's due date directly** is allowed (§6.3, "edit goals"). "Reset date" is the route for abandoned goals, because it is counted and logged.
+- **Deleting:**
+  - The only goal of an element can't be deleted (the button is disabled, and the database blocks it too).
+  - Deleting a whole element is permanent and asks for confirmation. The dialog points to switching it off instead if the history should be kept.
+- **Category view:** filters for status, deadline band and show/hide completed (shown by default). Sort by nearest deadline (default), least complete, or name.
+- **Category cards** show the number of active elements and the category % (done goals ÷ all goals of active elements).
+- **Completed goal text** uses a "done" green token: `#15803D` in light mode (5:1 on white), `#4ADE80` in dark mode.
+- **Abandoned goals:** the goal's text fades to 45%, but its **Reset date** button stays at full strength so it remains readable and tappable.
+- **Deferred to Phase 3 (charts):** the element burndown chart (§6.3, chart 8) is built with the other ECharts charts.
+- **Deferred to Phase 7 (polish):** the tick animation and the confetti at 100%.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).
