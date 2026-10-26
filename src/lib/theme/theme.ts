@@ -36,6 +36,26 @@ export function writeStoredPreference(storage: Pick<Storage, 'setItem'> | undefi
   }
 }
 
+// Set when saving the choice to the profile failed, so the next sync pushes it instead of overwriting it.
+export const THEME_UNSYNCED_KEY = 'pt-theme-unsynced';
+
+export function readUnsyncedFlag(storage: Pick<Storage, 'getItem'> | undefined): boolean {
+  try {
+    return storage?.getItem(THEME_UNSYNCED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function writeUnsyncedFlag(storage: Pick<Storage, 'setItem' | 'removeItem'> | undefined, unsynced: boolean): void {
+  try {
+    if (unsynced) storage?.setItem(THEME_UNSYNCED_KEY, '1');
+    else storage?.removeItem(THEME_UNSYNCED_KEY);
+  } catch {
+    // Storage blocked: nothing more we can do; the profile copy stays as it was.
+  }
+}
+
 export function applyTheme(doc: Document, theme: ResolvedTheme): void {
   doc.documentElement.setAttribute('data-theme', theme);
   doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[theme]);

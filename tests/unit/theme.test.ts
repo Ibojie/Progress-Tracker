@@ -6,6 +6,8 @@ import {
   resolveTheme,
   toggledPreference,
   writeStoredPreference,
+  readUnsyncedFlag,
+  writeUnsyncedFlag,
 } from '@/lib/theme/theme';
 
 describe('resolveTheme', () => {
@@ -66,5 +68,21 @@ describe('index.html no-flash script', () => {
     const { readFileSync } = await import('node:fs');
     const html = readFileSync('index.html', 'utf8');
     expect(html).toContain(`localStorage.getItem('${THEME_STORAGE_KEY}')`);
+  });
+});
+
+describe('unsynced flag', () => {
+  it('round-trips and clears', () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    expect(readUnsyncedFlag(storage)).toBe(false);
+    writeUnsyncedFlag(storage, true);
+    expect(readUnsyncedFlag(storage)).toBe(true);
+    writeUnsyncedFlag(storage, false);
+    expect(readUnsyncedFlag(storage)).toBe(false);
   });
 });
