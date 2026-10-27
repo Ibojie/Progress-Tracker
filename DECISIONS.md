@@ -161,6 +161,28 @@ The database fixes are in migration `20261026000300_phase2_review_fixes.sql`.
 - **Deadline calendar and Timeline are HTML, not ECharts,** so every day and every bar is a real, keyboard-reachable control or link. Calendar cells are 40px with 14–16px numbers, and the grid scrolls inside its own box on phones.
 - **Charts load separately:** ECharts (≈600 KB) loads only with the charts, using modular imports and the SVG renderer. The main bundle's size is left for the Phase 7 performance pass.
 
+### Responsive charts (owner request)
+- **Every chart works at any width.** Checked with sample data at 320, 390, 768 and 1280px, in light and dark mode: no sideways page scroll, no labels outside their card, and no chart text under 16px on phones.
+- **Gauges** are a grid of small charts: 2 per row on phones, 3 on tablets, 5 on desktop. Each is a link to its area.
+- **Bar charts turn horizontal on phones,** so area names fit (the readable-content rule for long labels).
+- **Legends are HTML lists under each chart.** They wrap onto new lines on any screen and screen readers can read them. ECharts' own legend squeezed into one scrolling line on phones.
+- **Radar on phones:** a smaller radar, with names wrapped onto two lines, so the side labels stay inside the card.
+- **Short label in charts:** "Personal Development" shows as "Personal Dev.", at the owner's request. Tables keep the full name.
+- **Developer-only preview:** `/__dev/charts` renders the real charts with sample data, so layouts can be checked without signing in. It only exists in the local development build; production builds leave it out.
+
+### Code review fixes (independent reviewer, before merging Phase 3)
+The database fixes are in `20261027000100_snapshot_totals.sql`.
+
+1. **Snapshot history is summed on the server** (`snapshot_totals`). The app used to download one row per element per day, and the API stops at 1,000 rows, so history was cut off after about 20 elements on the month view. Now it's at most days × 4 rows.
+2. **Switched-off elements leave the history comparisons too.** Before, switching off an element with 3 overdue goals made Overdue show "▼3" in green. Totals now count only elements that are active today, on every past day (acceptance test 9).
+3. **A custom range that ended in the past shows its last day,** not today's live figures. A range ending in the future runs to today.
+4. **Focus Now includes goals that haven't started but are due within 14 days,** matching the "Due in 14 days" tile.
+5. **Snapshots are taken at the end of each user's own day.** The job runs hourly at :55 and only snapshots users whose local time is 23:xx. Lagos users still get 23:55.
+6. **The parity test also covers a tick at exactly the switch-on or restart moment.**
+7. **Colour contrast:** the previous-period grey is now slate-500 `#64748B` (4.8:1 on white).
+   - The category yellow `#EDA100` is kept, because it's from the validated palette. It falls under the palette's "relief rule": every gauge also shows its name and % as text, and every chart has a table.
+8. **The radar's previous-period shape** is drawn only when every area has history. A missing value isn't 0%.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).
