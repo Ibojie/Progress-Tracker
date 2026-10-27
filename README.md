@@ -4,7 +4,7 @@ A personal Progressive Web App for tracking goals and deadlines in four areas of
 
 The full specification is in [`docs/PROGRESS_TRACKER_BUILD_PROMPT.md`](docs/PROGRESS_TRACKER_BUILD_PROMPT.md). Assumptions are logged in [`DECISIONS.md`](DECISIONS.md) and releases in [`CHANGELOG.md`](CHANGELOG.md).
 
-**Status:** Phase 3 (dashboard) released as v0.3.0. Live at https://progress-tracker-phi-five.vercel.app. See the changelog for what works today.
+**Status:** Phase 4 (installable app and offline use) released as v0.4.0. Live at https://progress-tracker-phi-five.vercel.app. See the changelog for what works today.
 
 ## Stack
 
@@ -70,7 +70,11 @@ The GitHub repo is connected to Vercel. Every pull request gets a preview URL an
 
 ## Install on a phone
 
-Phase 4 adds the installable PWA. Instructions for Android and iPhone will be added then.
+- **Android (Chrome):** open the app, then tap **Install app** on the Dashboard card or under Settings (or Chrome's **⋮** menu → **Install app**).
+- **iPhone (Safari):** tap **Share** → **Add to Home Screen** → **Add**. On iPhone, installing is also what enables push reminders (Phase 5).
+- **Desktop (Chrome or Edge):** use the install icon in the address bar.
+
+Once installed, the app opens offline with your saved data. Ticks and edits made offline sync when you're back online.
 
 ## Workflow
 

@@ -216,6 +216,10 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 - **Offline banner:** "Offline · showing your saved data", or "Offline · N changes will sync…", and while sending, "Syncing N changes…".
 - **Status history waits** while queued changes are pending, so it only records statuses the server has confirmed.
 
+### Owner's phone test (acceptance test 13)
+- **Passed on Android Chrome:** installed the app, opened it in airplane mode with saved data, ticked and edited offline, kept both changes across a restart, then reconnected. Both changes reached the database.
+- **Known quirk:** a tick made offline is timed when it **reaches the server** (the database sets `done_at` and `tick_changed_at`), not when it was tapped. If you reconnect on a later day, "goals completed" counts it on that day. Left as is for now; it can be fixed later by sending the device's tick time with queued ticks.
+
 ### Code review fixes (independent reviewer, before merging Phase 4)
 1. **Critical: opening the app while already offline.** TanStack Query assumes it starts online, so a reopened app tried to send its queue straight away, failed, and dropped it. The app now sets the real connection state (`navigator.onLine`) before anything runs.
 2. **Brief dropped connections:** queued changes retry network failures with back-off (1s, 2s, 4s… up to 30s), pausing while offline. Real rejections from the server are not retried.
