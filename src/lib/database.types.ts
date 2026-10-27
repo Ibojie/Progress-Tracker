@@ -13,3 +13,5 @@ export type GoalRow = Row<'goals'>;
 export type StatusEventRow = Row<'status_events'>;
 export type GoalDateResetRow = Row<'goal_date_resets'>;
 export type ProfileRow = Row<'profiles'>;
+export type NotificationRow = Row<'notification_log'>;
+export type PushSubscriptionRow = Row<'push_subscriptions'>;

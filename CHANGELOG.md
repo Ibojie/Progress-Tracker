@@ -2,6 +2,46 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-10-28 - Phase 5: notifications
+
+Live at https://progress.thebusinessapostle.net (the custom domain), with Google sign-in.
+
+### Added
+- **Reminders at 07:00 in your own timezone:**
+  - goals due in 21, 14, 7, 3 and 1 days, and due today;
+  - every overdue day ("X days left before this goal is abandoned");
+  - a goal or element that becomes abandoned;
+  - weekly nudges for Resource Delay over 7 days and for elements with no ticks for 14 days.
+- **Push notifications** on phone and desktop (Web Push).
+  - Tapping one opens the element.
+  - Each device is switched on in Settings.
+  - **Send test push** checks the setup.
+- **Emails** from `reminders@notify.thebusinessapostle.net` (Resend):
+  - due today, overdue day 1 and day 6, and abandoned;
+  - a **Monday digest** of last week: goals completed against the week before, completion, due soon, overdue, and the Focus Now list.
+- **Notification centre:** a bell at the top of every screen with an unread count, also shown on the installed app's icon where supported.
+- **Settings → Notifications:** push, email and in-app switches, quiet hours, and your timezone.
+- **Database:**
+  - `queue_notifications` decides every alert;
+  - an hourly job calls the new `notify` Edge Function;
+  - a secret in Supabase Vault protects the job.
+
+### Fixed (from the Phase 5 code review)
+- **Shared devices:** signing out, or a session ending, stops this device's reminders. A device moves to whoever signs in on it next.
+- **One notification per goal on the phone:** before, alerts for several goals in one element replaced each other.
+- **Missed runs:** a missed 07:00 run is caught up later the same day, never during quiet hours.
+- **Stalled nudges:** they count from the start date, so an element isn't "stalled" the day it starts.
+- **No double sends:** emails can't be sent twice after a crash (idempotency keys). Sending is paced and time-limited.
+- **Stale alerts are dropped:** a waiting push or email is skipped once its goal is ticked or its element switched off.
+- **Security:**
+  - push addresses must belong to a real push service;
+  - notification links can't leave the app;
+  - the app-icon count clears on sign-out.
+- **Settings:**
+  - switches have 44px tap areas;
+  - quiet hours save as soon as a time is picked, and From and Until can't be equal;
+  - iPhone asks for permission straight from the tap.
+
 ## [0.4.0] - 2026-10-27 - Phase 4: installable app and offline use
 
 ### Added

@@ -286,12 +286,17 @@ export type Database = {
       }
       notification_log: {
         Row: {
+          attempts: number
           body: string | null
           channel: Database["public"]["Enums"]["notification_channel"]
+          claimed_at: string | null
+          delivered_at: string | null
           element_id: string | null
           goal_id: string | null
           id: string
           kind: string
+          last_error: string | null
+          link: string | null
           read_at: string | null
           sent_at: string
           sent_on: string
@@ -299,12 +304,17 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attempts?: number
           body?: string | null
           channel: Database["public"]["Enums"]["notification_channel"]
+          claimed_at?: string | null
+          delivered_at?: string | null
           element_id?: string | null
           goal_id?: string | null
           id?: string
           kind: string
+          last_error?: string | null
+          link?: string | null
           read_at?: string | null
           sent_at?: string
           sent_on?: string
@@ -312,12 +322,17 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attempts?: number
           body?: string | null
           channel?: Database["public"]["Enums"]["notification_channel"]
+          claimed_at?: string | null
+          delivered_at?: string | null
           element_id?: string | null
           goal_id?: string | null
           id?: string
           kind?: string
+          last_error?: string | null
+          link?: string | null
           read_at?: string | null
           sent_at?: string
           sent_on?: string
@@ -457,6 +472,10 @@ export type Database = {
     }
     Functions: {
       assert_element_has_goals: { Args: { target: string }; Returns: undefined }
+      claim_deliveries: {
+        Args: { p_limit?: number }
+        Returns: Database["public"]["Tables"]["notification_log"]["Row"][]
+      }
       create_element_with_goals: {
         Args: {
           p_category_id: string
@@ -477,6 +496,33 @@ export type Database = {
           pct: number
           status: Database["public"]["Enums"]["element_status"]
         }[]
+      }
+      finish_delivery: {
+        Args: { p_error?: string; p_id: string; p_ok: boolean }
+        Returns: undefined
+      }
+      is_push_endpoint: { Args: { p_endpoint: string }; Returns: boolean }
+      notify_in_quiet: {
+        Args: { p_local: string; p_quiet_end: string; p_quiet_start: string }
+        Returns: boolean
+      }
+      notify_send_hour: {
+        Args: { p_quiet_end: string; p_quiet_start: string }
+        Returns: number
+      }
+      notify_token_ok: { Args: { p_token: string }; Returns: boolean }
+      queue_notifications: {
+        Args: { p_now?: string; p_send_hour_only?: boolean }
+        Returns: number
+      }
+      register_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_label: string
+          p_p256dh: string
+        }
+        Returns: undefined
       }
       reset_goal_date: {
         Args: {
@@ -510,6 +556,10 @@ export type Database = {
       tick_goal: {
         Args: { p_goal_id: string; p_is_done: boolean; p_ticked_at: string }
         Returns: undefined
+      }
+      weekly_digest_data: {
+        Args: { p_today: string; p_user: string }
+        Returns: Json
       }
     }
     Enums: {

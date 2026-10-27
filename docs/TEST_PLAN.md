@@ -22,3 +22,15 @@ Tests are layered: many fast unit tests, some database tests, and (from Phase 7)
 - **Bands (§5):** boundaries; exact edge colours (acceptance test 7); steady darkening; dark-mode far edge; AA text contrast for every day from −10 to 120 in both themes.
 - **Pills (§4.1):** label, icon and AA contrast for all nine statuses.
 - **Acceptance tests 1–8 and 17** as named tests.
+
+## Notification cases (Phase 5)
+- **Alert rules (`tests/db/notifications.test.ts`, real migrations):**
+  - Due in 21, 14, 7, 3 and 1 days; due today; overdue days 1–7, with email only on days 1 and 6; abandoned on day 8 only.
+  - Element abandoned (once), Resource Delay over 7 days and no ticks for 14 days (weekly).
+  - The Monday digest and its figures.
+- **Timing:** the 07:00 send hour in each user's own timezone; quiet hours that cover 07:00 delay the send until they end.
+- **Never twice:** re-running the same hour or day queues nothing new; claimed deliveries aren't handed out again; failures are retried, then stopped.
+- **Switches:** each channel off sends nothing on it; push needs a subscribed device; decommissioned elements and finished goals never alert.
+- **Security:** users read only their own alerts and may change only `read_at`; only the service role can queue, claim, read digests or check the scheduler secret.
+- **Messages (`tests/unit/notifyMessages.test.ts`):** push payloads, links limited to in-app paths, HTML escaping in emails, digest wording, the VAPID key format.
+- **Owner's device tests (acceptance test 11 and §9):** turn on push, Send test push, tap it to open the app; receive the 07:00 alerts and the Monday digest email.
