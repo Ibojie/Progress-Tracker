@@ -374,3 +374,50 @@ describe('Phase 2 review fixes', () => {
     await expect(asUser(USER_B, (q) => q(`select swap_goal_order($1, $2)`, [ids[0]!.id, ids[1]!.id]))).rejects.toThrow(/not found/);
   });
 });
+
+describe('tick_goal (offline ticks keep the time they were tapped)', () => {
+  async function goalOf(userId: string): Promise<string> {
+    const elementId = await createElement(userId, 1);
+    const goal = await asUser(userId, (q) => q<{ id: string }>(`select id from goals where element_id = $1`, [elementId]));
+    return goal.rows[0]!.id;
+  }
+  const times = async (id: string) =>
+    (await db.query<{ is_done: boolean; done_at: Date | null; tick_changed_at: Date | null; age_s: number }>(
+      `select is_done, done_at, tick_changed_at, extract(epoch from now() - tick_changed_at)::int as age_s from goals where id = $1`,
+      [id],
+    )).rows[0]!;
+
+  it('records the tap time from the device (here: 3 hours ago)', async () => {
+    const id = await goalOf(USER_A);
+    await asUser(USER_A, (q) => q(`select tick_goal($1, true, now() - interval '3 hours')`, [id]));
+    const t = await times(id);
+    expect(t.is_done).toBe(true);
+    expect(t.age_s).toBeGreaterThanOrEqual(3 * 3600 - 5);
+    expect(t.age_s).toBeLessThanOrEqual(3 * 3600 + 5);
+    expect(t.done_at!.getTime()).toBe(t.tick_changed_at!.getTime());
+  });
+
+  it('never accepts a future time or one older than 7 days', async () => {
+    const id = await goalOf(USER_A);
+    await asUser(USER_A, (q) => q(`select tick_goal($1, true, now() + interval '2 days')`, [id]));
+    expect((await times(id)).age_s).toBeLessThanOrEqual(5);
+    await asUser(USER_A, (q) => q(`select tick_goal($1, false, now() - interval '30 days')`, [id]));
+    const t = await times(id);
+    expect(t.is_done).toBe(false);
+    expect(t.done_at).toBeNull();
+    expect(Math.round(t.age_s / 86400)).toBe(7);
+  });
+
+  it('a normal update outside tick_goal still uses the server time', async () => {
+    const id = await goalOf(USER_A);
+    await asUser(USER_A, (q) => q(`update goals set is_done = true where id = $1`, [id]));
+    expect((await times(id)).age_s).toBeLessThanOrEqual(5);
+  });
+
+  it('refuses another user’s goal and signed-out visitors', async () => {
+    const id = await goalOf(USER_A);
+    await expect(asUser(USER_B, (q) => q(`select tick_goal($1, true, now())`, [id]))).rejects.toThrow(/no longer exists/);
+    await expect(asUser(null, (q) => q(`select tick_goal($1, true, now())`, [id]))).rejects.toThrow(/permission denied/);
+    expect((await times(id)).is_done).toBe(false);
+  });
+});
