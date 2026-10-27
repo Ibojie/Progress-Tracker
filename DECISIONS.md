@@ -216,6 +216,17 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 - **Offline banner:** "Offline · showing your saved data", or "Offline · N changes will sync…", and while sending, "Syncing N changes…".
 - **Status history waits** while queued changes are pending, so it only records statuses the server has confirmed.
 
+### Code review fixes (independent reviewer, before merging Phase 4)
+1. **Critical: opening the app while already offline.** TanStack Query assumes it starts online, so a reopened app tried to send its queue straight away, failed, and dropped it. The app now sets the real connection state (`navigator.onLine`) before anything runs.
+2. **Brief dropped connections:** queued changes retry network failures with back-off (1s, 2s, 4s… up to 30s), pausing while offline. Real rejections from the server are not retried.
+3. **"Nothing updated" counts as a failure:** for example, the goal was deleted on another device, or the session ended. Before, it showed as synced.
+4. **Failures after a reload are explained.** A queued change restored from an earlier session that fails now shows a message, through an app-wide notice channel.
+5. **Saved data is cleared on any sign-out**, including expired or revoked sessions, and when a different user signs in on the same device.
+6. **One failed change no longer hides later ones:** if other changes are still queued, the screen reloads from the server instead of restoring an older snapshot.
+7. **The hourly update check is quiet offline,** with no error logged.
+8. **Live regions stay mounted:** the offline banner and the update prompt keep their screen-reader region in place and only change its text, so the change is announced.
+9. **The offline banner is part of the sticky header,** so it can't slide under it on phones with a notch.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - **Google sign-in (owner request, scheduled right after Phase 4):** the owner creates a Google OAuth client, then we enable the Google provider in Supabase.
