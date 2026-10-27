@@ -190,9 +190,10 @@ function useQueuedMutation<TVars>(
   });
 }
 
-/** Tick or untick a goal (§6.3). Works offline. */
+/** Tick or untick a goal (§6.3). Works offline, and remembers when the box was tapped. */
 export function useToggleGoal() {
-  return useQueuedMutation<ToggleGoalVars>(QUEUED.toggleGoal, (rows, v) => applyToggle(rows, v, new Date().toISOString()), 'Couldn’t save the tick.');
+  const m = useQueuedMutation<ToggleGoalVars>(QUEUED.toggleGoal, (rows, v) => applyToggle(rows, v, new Date().toISOString()), 'Couldn’t save the tick.');
+  return { ...m, mutate: (vars: Omit<ToggleGoalVars, 'tickedAt'>) => m.mutate({ ...vars, tickedAt: new Date().toISOString() }) };
 }
 
 /** Edit an element's name, description or 0% status. Works offline. */

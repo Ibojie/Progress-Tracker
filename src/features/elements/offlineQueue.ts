@@ -26,6 +26,8 @@ export function isQueuedKey(key: MutationKey | undefined): boolean {
 export interface ToggleGoalVars {
   goalId: string;
   isDone: boolean;
+  /** When the box was tapped on the device; kept so an offline tick counts on the right day. */
+  tickedAt?: string;
 }
 export interface UpdateGoalVars {
   goalId: string;
@@ -71,8 +73,9 @@ export const queueRetry = (failures: number, error: unknown) => isNetworkError(e
 export const queueRetryDelay = (failures: number) => Math.min(1000 * 2 ** failures, 30_000);
 
 export const queuedFns = {
-  toggleGoal: async ({ goalId, isDone }: ToggleGoalVars) => {
-    checkUpdated(await db().from('goals').update({ is_done: isDone }).eq('id', goalId).select('id'));
+  toggleGoal: async ({ goalId, isDone, tickedAt }: ToggleGoalVars) => {
+    // tick_goal records the tap time (clamped by the server) and fails if the goal is gone.
+    check(await db().rpc('tick_goal', { p_goal_id: goalId, p_is_done: isDone, p_ticked_at: tickedAt ?? new Date().toISOString() }));
   },
   updateGoal: async ({ goalId, goal }: UpdateGoalVars) => {
     checkUpdated(
@@ -116,8 +119,9 @@ type Rows = ElementWithGoals[] | undefined;
 
 const mapGoals = (rows: Rows, fn: (g: GoalRow) => GoalRow): Rows => rows?.map((el) => ({ ...el, goals: el.goals.map(fn) }));
 
-export function applyToggle(rows: Rows, { goalId, isDone }: ToggleGoalVars, now: string): Rows {
-  return mapGoals(rows, (g) => (g.id === goalId ? { ...g, is_done: isDone, done_at: isDone ? now : null, tick_changed_at: now } : g));
+export function applyToggle(rows: Rows, { goalId, isDone, tickedAt }: ToggleGoalVars, now: string): Rows {
+  const at = tickedAt ?? now;
+  return mapGoals(rows, (g) => (g.id === goalId ? { ...g, is_done: isDone, done_at: isDone ? at : null, tick_changed_at: at } : g));
 }
 
 export function applyGoalEdit(rows: Rows, { goalId, goal }: UpdateGoalVars): Rows {

@@ -65,6 +65,9 @@ describe('instant on-screen updates', () => {
     const undone = applyToggle(out, { goalId: 'a', isDone: false }, '2026-10-27T11:00:00Z')!;
     expect(undone[0]!.goals[0]).toMatchObject({ is_done: false, done_at: null });
     expect(applyToggle(undefined, { goalId: 'a', isDone: true }, 'x')).toBeUndefined();
+    // An offline tick shows the time it was tapped, not when the screen redrew.
+    const tapped = applyToggle(rows(), { goalId: 'a', isDone: true, tickedAt: '2026-10-26T22:59:00Z' }, '2026-10-27T08:00:00Z')!;
+    expect(tapped[0]!.goals[0]).toMatchObject({ done_at: '2026-10-26T22:59:00Z', tick_changed_at: '2026-10-26T22:59:00Z' });
   });
 
   it('goal and element edits show at once', () => {
