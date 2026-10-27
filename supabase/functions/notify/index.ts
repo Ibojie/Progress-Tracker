@@ -58,7 +58,11 @@ async function pushToUser(db: SupabaseClient, userId: string, payload: object): 
       continue;
     }
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), { TTL: 60 * 60 * 12 });
+      // High urgency: Android otherwise holds normal-priority pushes while the phone is idle.
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), {
+        TTL: 60 * 60 * 12,
+        urgency: 'high',
+      });
       sent++;
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode;
@@ -146,7 +150,14 @@ async function runTest(db: SupabaseClient, req: Request): Promise<Response> {
     url: '/settings',
     tag: 'test',
   });
-  if (result.sent === 0) return json(400, { error: 'No device is subscribed. Turn on push notifications first.' });
+  if (result.sent === 0) {
+    return json(400, {
+      error:
+        result.error === 'no devices'
+          ? 'No device is subscribed. Turn on push notifications first.'
+          : `The push service refused it (${result.error}). Turn push off and on again, then retry.`,
+    });
+  }
   return json(200, { sent: result.sent });
 }
 
