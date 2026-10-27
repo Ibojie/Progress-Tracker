@@ -15,6 +15,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { SetupPage } from '@/pages/SetupPage';
 import { TimelinePage } from '@/pages/TimelinePage';
+import { UpdatePrompt } from '@/features/pwa/UpdatePrompt';
 
 // Development-only layout check for the charts; the import is dropped from production builds.
 const ChartsPreview = import.meta.env.DEV ? lazy(() => import('@/dev/ChartsPreview')) : null;
@@ -25,6 +26,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ThemeProfileSync />
+      <UpdatePrompt />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />

@@ -2,6 +2,22 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-10-27 - Phase 4: installable app and offline use
+
+### Added
+- **Installable app:** app manifest, icons (including maskable and Apple), an Install app button where the browser offers it, and Add to Home Screen steps on iPhone.
+- **Service worker:** stores the app shell for offline opening, and offers **Update now** when a new version is ready.
+- **Data saved on the device (IndexedDB)** so the app reads offline. It is cleared on sign-out.
+- **Offline queue:** ticks, goal and element edits, and reordering are kept offline and sent in order when back online, even after a restart.
+- **Offline banner** with the number of changes waiting. Online-only actions say they need a connection.
+
+### Fixed (from the Phase 4 code review)
+- Opening the app while already offline keeps the queue paused instead of sending and losing it.
+- Dropped connections are retried with back-off. An update the server didn't apply counts as a failure.
+- Saved data is cleared on any sign-out and when a different user signs in.
+- Restored changes that fail show a message. The offline banner and update prompt are announced to screen readers.
+- A tick made offline counts on the day it was tapped, not the day it synced (`tick_goal`).
+
 ## [0.3.0] - 2026-10-27 - Phase 3: dashboard
 
 ### Added

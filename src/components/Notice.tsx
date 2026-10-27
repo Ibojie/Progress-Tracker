@@ -7,10 +7,18 @@ interface NoticeContextValue {
 
 const NoticeContext = createContext<NoticeContextValue>({ notify: () => {} });
 
+// Lets code outside React (the offline queue) show a message.
+let globalNotify: ((message: string) => void) | null = null;
+// eslint-disable-next-line react-refresh/only-export-components
+export function notifyGlobally(message: string): void {
+  globalNotify?.(message);
+}
+
 /** A single, screen-reader-announced message bar for save errors and confirmations. */
 export function NoticeProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
   const notify = useCallback((m: string) => setMessage(m), []);
+  globalNotify = notify;
   return (
     <NoticeContext.Provider value={{ notify }}>
       {children}

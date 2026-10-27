@@ -183,6 +183,58 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
    - The category yellow `#EDA100` is kept, because it's from the validated palette. It falls under the palette's "relief rule": every gauge also shows its name and % as text, and every chart has a table.
 8. **The radar's previous-period shape** is drawn only when every area has history. A missing value isn't 0%.
 
+## Phase 4: installable app and offline use
+
+### Installing
+- **App identity:** the manifest has name "Progress Tracker", short name "Progress", theme `#1E40AF`, `display: standalone` and start URL `/`.
+- **Icons:**
+  - 192px and 512px "any" icons (a rounded tile).
+  - A 512px "maskable" icon, with the mark inside the central 70% so Android can crop it to any shape.
+  - A 180px Apple touch icon.
+  - All are rendered from SVG by `npm run icons` (`scripts/generate-icons.mjs`).
+- **Install prompt:**
+  - Where the browser offers installation (Chrome, Edge, Android), the app shows its own **Install app** button: in a one-time Dashboard banner (it can be hidden) and always under Settings.
+  - On iPhone and iPad, which have no install prompt, the same places show the Share → Add to Home Screen steps. These are needed on iPhone for push reminders in Phase 5 (§9).
+
+### Service worker
+- **Our own service worker** (`src/sw.ts`, Workbox, `injectManifest`), so Phase 5 can add push to it.
+- **What it stores:** the app shell (HTML, JS, CSS, fonts, icons), about 1.6 MB. Every page address opens the stored shell.
+- **What it doesn't store:** Supabase requests. They're never served stale.
+- **Updates:** a new version downloads in the background (checked hourly while the app is open), and the app offers **Update now**. It never reloads by itself, so nothing you're typing is lost.
+- **Caching on Vercel:** `sw.js` and the manifest are served with `Cache-Control: no-cache`, so updates are picked up.
+- **Checked here:** with the local server switched off, the production build still opened and routed from the device copy.
+
+### Offline data and the queue
+- **Your data on the device:** the TanStack Query cache is saved in IndexedDB (via `idb-keyval`) for up to 7 days, so elements, goals and the dashboard are readable offline.
+- **Signing out deletes that copy** from the device. If changes are still waiting to sync, the app warns first.
+- **Queued while offline:** ticking and unticking, editing a goal (title, notes, dates), editing an element (name, description, Started / Resource Delay), and reordering goals.
+  - Each shows on screen at once.
+  - The queue is saved with the cache, and resumes after the app is closed and reopened.
+  - Changes are sent **in order, one at a time** (one TanStack mutation scope).
+- **Online only (flagged to the owner before building; no objection):** creating an element, adding or deleting a goal or element, Reset date, and switching an element off or on. These depend on server checks or could conflict between devices. Offline, their buttons are disabled with "Needs a connection".
+- **If a queued change fails** when it is finally sent, the screen is corrected from the server and a message explains.
+- **Offline banner:** "Offline · showing your saved data", or "Offline · N changes will sync…", and while sending, "Syncing N changes…".
+- **Status history waits** while queued changes are pending, so it only records statuses the server has confirmed.
+
+### Owner's phone test (acceptance test 13)
+- **Passed on Android Chrome:** installed the app, opened it in airplane mode with saved data, ticked and edited offline, kept both changes across a restart, then reconnected. Both changes reached the database.
+- **Tick times (fixed at the owner's request after the phone test):** ticks are now saved through `tick_goal`, which records **when the box was tapped on the device**. Before, an offline tick was timed when it reached the server, so a late reconnect counted it on the wrong day.
+  - The server limits the time: never in the future, and never more than 7 days back (the offline data limit).
+  - Only `tick_goal` can supply a time, through a transaction-local setting the API can't reach.
+  - Ordinary updates still use the server clock.
+
+### Code review fixes (independent reviewer, before merging Phase 4)
+1. **Critical: opening the app while already offline.** TanStack Query assumes it starts online, so a reopened app tried to send its queue straight away, failed, and dropped it. The app now sets the real connection state (`navigator.onLine`) before anything runs.
+2. **Brief dropped connections:** queued changes retry network failures with back-off (1s, 2s, 4s… up to 30s), pausing while offline. Real rejections from the server are not retried.
+3. **"Nothing updated" counts as a failure:** for example, the goal was deleted on another device, or the session ended. Before, it showed as synced.
+4. **Failures after a reload are explained.** A queued change restored from an earlier session that fails now shows a message, through an app-wide notice channel.
+5. **Saved data is cleared on any sign-out**, including expired or revoked sessions, and when a different user signs in on the same device.
+6. **One failed change no longer hides later ones:** if other changes are still queued, the screen reloads from the server instead of restoring an older snapshot.
+7. **The hourly update check is quiet offline,** with no error logged.
+8. **Live regions stay mounted:** the offline banner and the update prompt keep their screen-reader region in place and only change its text, so the change is announced.
+9. **The offline banner is part of the sticky header,** so it can't slide under it on phones with a notch.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
-- A Google OAuth client is needed if Google sign-in is wanted (optional).
+- **Google sign-in (owner request, scheduled right after Phase 4):** the owner creates a Google OAuth client, then we enable the Google provider in Supabase.
+- **After all phases (owner request):** a Privacy Policy, Terms of Service, Fair Use and Refund policies, plus in-app account deletion, as Google Play requires.

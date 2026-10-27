@@ -507,6 +507,10 @@ export type Database = {
         Args: { p_end_of_day_only?: boolean; p_now?: string }
         Returns: number
       }
+      tick_goal: {
+        Args: { p_goal_id: string; p_is_done: boolean; p_ticked_at: string }
+        Returns: undefined
+      }
     }
     Enums: {
       category_key:
