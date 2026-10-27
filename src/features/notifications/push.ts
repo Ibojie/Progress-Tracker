@@ -102,6 +102,40 @@ export async function disablePush(): Promise<void> {
   await sub.unsubscribe();
 }
 
+/**
+ * Waits up to `ms` for the service worker to say a push arrived on this device.
+ * Resolves with what it reported, or null if nothing arrived.
+ */
+export function waitForPush(ms = 20_000): Promise<{ shown: boolean; error?: string } | null> {
+  if (!pushSupported()) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'PUSH_RECEIVED') return;
+      done({ shown: !!e.data.shown, error: e.data.error });
+    };
+    const timer = window.setTimeout(() => done(null), ms);
+    function done(result: { shown: boolean; error?: string } | null) {
+      window.clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      resolve(result);
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage);
+  });
+}
+
+/** Shows a notification straight from this device, without the server: checks the phone's own settings. */
+export async function showLocalTest(): Promise<string | null> {
+  const reg = await registration();
+  if (!reg) return 'Notifications aren’t available here.';
+  if (Notification.permission !== 'granted') return 'Notifications aren’t allowed for this app. Turn push on first.';
+  try {
+    await reg.showNotification('Local test', { body: 'This device can show Progress Tracker notifications.', icon: '/pwa-192x192.png', tag: 'local-test' });
+    return null;
+  } catch (e) {
+    return `This device refused to show it: ${(e as Error).message}`;
+  }
+}
+
 export async function sendTestPush(): Promise<string | null> {
   if (!supabase) return 'The app isn’t connected to its server.';
   const { data, error } = await supabase.functions.invoke<{ sent?: number; error?: string }>('notify', { body: { mode: 'test' } });

@@ -22,13 +22,23 @@ self.addEventListener('push', (event) => {
     data = { body: event.data?.text() };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'Progress Tracker', {
-      body: data.body ?? '',
-      icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
-      tag: data.tag,
-      data: { url: data.url ?? '/' },
-    }),
+    (async () => {
+      // Tell any open window what happened, so Settings → Send test push can report it.
+      const report = async (msg: { type: 'PUSH_RECEIVED'; shown: boolean; error?: string }) => {
+        for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) c.postMessage(msg);
+      };
+      try {
+        await self.registration.showNotification(data.title ?? 'Progress Tracker', {
+          body: data.body ?? '',
+          icon: '/pwa-192x192.png',
+          tag: data.tag,
+          data: { url: data.url ?? '/' },
+        });
+        await report({ type: 'PUSH_RECEIVED', shown: true });
+      } catch (e) {
+        await report({ type: 'PUSH_RECEIVED', shown: false, error: (e as Error).message });
+      }
+    })(),
   );
 });
 
