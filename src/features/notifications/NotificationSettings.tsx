@@ -12,7 +12,7 @@ import { useInstall } from '@/features/pwa/install';
 import { NEEDS_CONNECTION, useOnline } from '@/lib/useOnline';
 import { DEFAULT_TIMEZONE } from '@/lib/engine';
 import { toTimeInput, usePushDevices, useUpdateProfile } from './api';
-import { deviceSubscription, disablePush, enablePush, permission, pushSupported, sendTestPush } from './push';
+import { deviceSubscription, disablePush, enablePush, permission, pushSupported, sendTestPush, showLocalTest, waitForPush } from './push';
 
 function timezones(): string[] {
   const all = (Intl as typeof Intl & { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone');
@@ -94,9 +94,27 @@ export function NotificationSettings() {
 
   async function test() {
     setBusy(true);
+    const arrival = waitForPush();
     const error = await sendTestPush();
+    if (error) {
+      setBusy(false);
+      return notify(error);
+    }
+    notify('Test sent. Waiting for it to reach this device…');
+    const got = await arrival;
     setBusy(false);
-    notify(error ?? 'Test notification sent. It should appear in a few seconds.');
+    notify(
+      !got
+        ? 'The server sent it, but nothing reached this device within 20 seconds.'
+        : got.shown
+          ? 'It reached this device and was shown. Check your notification shade if it didn’t pop up.'
+          : `It reached this device, but the device wouldn’t show it: ${got.error ?? 'unknown reason'}.`,
+    );
+  }
+
+  async function localTest() {
+    const error = await showLocalTest();
+    notify(error ?? 'Local test shown. If you can’t see it, this device is hiding notifications from the app.');
   }
 
   const otherDevices = (devices.data?.length ?? 0) - (thisDevice ? 1 : 0);
@@ -139,6 +157,9 @@ export function NotificationSettings() {
           <div className="-mt-2 pb-4">
             <Button variant="outline" disabled={busy || !online} onClick={() => void test()}>
               <Send aria-hidden /> Send test push
+            </Button>
+            <Button variant="ghost" className="ml-2" disabled={busy} onClick={() => void localTest()}>
+              Local test
             </Button>
           </div>
         )}
