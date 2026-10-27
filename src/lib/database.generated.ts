@@ -487,11 +487,26 @@ export type Database = {
         }
         Returns: undefined
       }
+      snapshot_totals: {
+        Args: { p_from: string }
+        Returns: {
+          abandoned: number
+          category_id: string
+          due_soon: number
+          goals_done: number
+          goals_total: number
+          overdue: number
+          snapshot_date: string
+        }[]
+      }
       swap_goal_order: {
         Args: { p_goal_a: string; p_goal_b: string }
         Returns: undefined
       }
-      take_daily_snapshots: { Args: { p_now?: string }; Returns: number }
+      take_daily_snapshots: {
+        Args: { p_end_of_day_only?: boolean; p_now?: string }
+        Returns: number
+      }
     }
     Enums: {
       category_key:

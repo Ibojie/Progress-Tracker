@@ -35,7 +35,7 @@ const categories = [
 ];
 
 const doneDates = elements.flatMap((e) => e.goals.map((g) => g.doneDate).filter((d): d is string => !!d));
-const kpis = computeKpis({ period, today: { goalsTotal: 10, goalsDone: 5, overdue: 1, abandoned: 0, dueSoon: 4 }, doneDates, snapshots: [] });
+const kpis = computeKpis({ period, asOf: TODAY, today: { goalsTotal: 10, goalsDone: 5, overdue: 1, abandoned: 0, dueSoon: 4 }, doneDates, snapshots: [] });
 const label = PERIOD_LABEL.week;
 
 const data = {

@@ -47,15 +47,16 @@ function randomScenario(r: () => number): Scenario {
       tickChangedAt: r() < 0.6 ? ts(int(-30, 5)) : null,
     };
   });
-  return {
-    goals,
-    element: {
-      isDecommissioned: r() < 0.08,
-      zeroProgressStatus: r() < 0.3 ? 'resource_delay' : r() < 0.5 ? 'started' : 'not_started',
-      recommissionedAt: r() < 0.15 ? ts(int(-30, 5)) : null,
-      restartedAt: r() < 0.15 ? ts(int(-30, 5)) : null,
-    },
+  const element: EngineElement = {
+    isDecommissioned: r() < 0.08,
+    zeroProgressStatus: r() < 0.3 ? 'resource_delay' : r() < 0.5 ? 'started' : 'not_started',
+    recommissionedAt: r() < 0.15 ? ts(int(-30, 5)) : null,
+    restartedAt: r() < 0.15 ? ts(int(-30, 5)) : null,
   };
+  // Edge case: a tick at exactly the switch-on or restart moment ("since" is strictly after).
+  const exact = element.recommissionedAt ?? element.restartedAt;
+  if (exact && r() < 0.5) goals[0]!.tickChangedAt = exact;
+  return { goals, element };
 }
 
 async function insertScenario(sc: Scenario, categoryId: string): Promise<string> {
@@ -142,10 +143,12 @@ describe('take_daily_snapshots', () => {
       return el.rows[0]!.id;
     });
 
-    // 31 Oct 23:30 UTC is already 1 Nov in Lagos: the start date has arrived there.
-    await db.query(`select take_daily_snapshots('2026-10-31T23:30:00Z')`);
+    // 1 Nov 22:55 UTC is 23:55 on 1 Nov in Lagos: the end of the user's day, after the start date.
+    await db.query(`select take_daily_snapshots('2026-11-01T22:55:00Z')`);
     // Run again the same night: no duplicate snapshot or history row.
-    await db.query(`select take_daily_snapshots('2026-10-31T23:45:00Z')`);
+    await db.query(`select take_daily_snapshots('2026-11-01T22:58:00Z')`);
+    // Other hours are skipped by default (not the end of the user's day).
+    expect((await db.query<{ n: number }>(`select take_daily_snapshots('2026-11-02T10:55:00Z') as n`)).rows[0]!.n).toBe(0);
 
     const snaps = (
       await db.query<{ snapshot_date: Date; status: string; due_soon_count: number; goals_total: number }>(
@@ -171,6 +174,49 @@ describe('take_daily_snapshots', () => {
       db.transaction(async (tx) => {
         await tx.exec(`set local role authenticated`);
         await tx.query(`select take_daily_snapshots()`);
+      }),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe('snapshot_totals', () => {
+  const OWNER = '00000000-0000-0000-0000-0000000000c3';
+
+  it('sums per category and day, counting only elements that are active now', async () => {
+    await db.query(`insert into auth.users (id, email) values ($1, 'totals@test')`, [OWNER]);
+    const cat = (await db.query<{ id: string }>(`select id from categories where user_id = $1 and key = 'paid_job'`, [OWNER])).rows[0]!.id;
+    const make = (name: string, goals: number, done: number) =>
+      db.transaction(async (tx) => {
+        const el = await tx.query<{ id: string }>(`insert into elements (user_id, category_id, name) values ($1, $2, $3) returning id`, [OWNER, cat, name]);
+        for (let i = 0; i < goals; i++) {
+          await tx.query(
+            `insert into goals (user_id, element_id, title, start_date, due_date, is_done) values ($1, $2, $3, '2026-10-01', '2026-10-20', $4)`,
+            [OWNER, el.rows[0]!.id, `g${i}`, i < done],
+          );
+        }
+        return el.rows[0]!.id;
+      });
+    await make('Kept', 4, 1);
+    const off = await make('Switched off later', 2, 0);
+    await db.query(`select take_daily_snapshots('2026-10-25T22:55:00Z', false)`);
+    // Switched off AFTER the snapshot: its history must drop out of the comparisons too.
+    await db.query(`update elements set is_decommissioned = true where id = $1`, [off]);
+
+    const rows = await db.transaction(async (tx) => {
+      await tx.exec(`set local role authenticated`);
+      await tx.query(`select set_config('request.jwt.claim.sub', $1, true)`, [OWNER]);
+      return (await tx.query<Record<string, unknown>>(`select * from snapshot_totals('2026-10-01')`)).rows;
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ category_id: cat, goals_total: 4, goals_done: 1, overdue: 3, abandoned: 0, due_soon: 0 }); // 3 open goals, 5 days late
+    expect((rows[0]!.snapshot_date as Date).toISOString().slice(0, 10)).toBe('2026-10-25');
+  });
+
+  it('signed-out visitors cannot call it', async () => {
+    await expect(
+      db.transaction(async (tx) => {
+        await tx.exec(`set local role anon`);
+        await tx.query(`select * from snapshot_totals('2026-10-01')`);
       }),
     ).rejects.toThrow(/permission denied/);
   });

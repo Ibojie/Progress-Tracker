@@ -1,13 +1,14 @@
 import { eachDay } from './dates';
 import { inRange, type DateRange, type PeriodPair } from './periods';
-import type { ElementStatus, IsoDate } from './types';
+import type { IsoDate } from './types';
 
-/** One row of daily_snapshots (one element on one day). */
+/**
+ * Snapshot totals for one category on one day (from the snapshot_totals database function,
+ * which already leaves out elements that are switched off now).
+ */
 export interface Snapshot {
   date: IsoDate;
-  elementId: string;
   categoryId: string;
-  status: ElementStatus;
   goalsTotal: number;
   goalsDone: number;
   overdue: number;
@@ -42,11 +43,10 @@ export interface Kpi {
 
 const EMPTY: DayTotals = { goalsTotal: 0, goalsDone: 0, overdue: 0, abandoned: 0, dueSoon: 0 };
 
-/** Sum snapshots per day, leaving out decommissioned elements (§4.5). */
+/** Sum the category rows per day. */
 export function totalsByDay(snapshots: readonly Snapshot[]): Map<IsoDate, DayTotals> {
   const out = new Map<IsoDate, DayTotals>();
   for (const s of snapshots) {
-    if (s.status === 'decommissioned') continue;
     const t = out.get(s.date) ?? { ...EMPTY };
     t.goalsTotal += s.goalsTotal;
     t.goalsDone += s.goalsDone;
@@ -73,6 +73,8 @@ function totalsAt(byDay: Map<IsoDate, DayTotals>, range: DateRange): DayTotals |
 
 export interface KpiInputs {
   period: PeriodPair;
+  /** Today's date (user's timezone). */
+  asOf: IsoDate;
   /** Live figures for today (active elements only). */
   today: DayTotals;
   /** Completion dates (user's timezone) of goals in active elements. */
@@ -81,22 +83,25 @@ export interface KpiInputs {
 }
 
 /** The five KPI tiles with deltas against the same point of the previous period (§6.1). */
-export function computeKpis({ period, today, doneDates, snapshots }: KpiInputs): Kpi[] {
+export function computeKpis({ period, asOf, today, doneDates, snapshots }: KpiInputs): Kpi[] {
   const byDay = totalsByDay(snapshots);
   const prev = totalsAt(byDay, period.previous);
-  const days = eachDay(period.current.start, period.current.end);
-  // History from snapshots, with today's live value as the last point.
+  // A custom range that ended in the past is shown as it stood on its last day, not as of today.
+  const live = period.current.end >= asOf;
+  const current = live ? today : (totalsAt(byDay, period.current) ?? EMPTY);
+  const days = eachDay(period.current.start, live && period.current.end > asOf ? asOf : period.current.end);
+  // History from snapshots; while the range is live, today's figure is the last point.
   const seriesOf = (pick: (t: DayTotals) => number) =>
-    days.map((d, i) => (i === days.length - 1 ? pick(today) : byDay.has(d) ? pick(byDay.get(d)!) : null)).filter(
-      (v): v is number => v !== null,
-    );
+    days
+      .map((d, i) => (live && i === days.length - 1 ? pick(today) : byDay.has(d) ? pick(byDay.get(d)!) : null))
+      .filter((v): v is number => v !== null);
 
   const countDone = (range: DateRange) => doneDates.filter((d) => inRange(d, range)).length;
   let running = 0;
   const completedSeries = days.map((d) => (running += doneDates.filter((x) => x === d).length));
 
   const level = (key: KpiKey, label: string, pick: (t: DayTotals) => number, goodWhenUp: boolean, unit?: '%'): Kpi => {
-    const value = pick(today);
+    const value = pick(current);
     const previous = prev ? pick(prev) : null;
     return { key, label, value, previous, delta: previous === null ? null : value - previous, goodWhenUp, series: seriesOf(pick), unit };
   };

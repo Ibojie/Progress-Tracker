@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/PagePlaceholder';
 import { Label } from '@/components/ui/label';
@@ -31,15 +31,11 @@ export function TimelinePage() {
   const [showDone, setShowDone] = useState(true);
 
   const active = views.filter((v) => v.status !== 'decommissioned');
-  const rows = useMemo(
-    () =>
-      active.flatMap((v) =>
-        v.goals
-          .filter((g) => showDone || !g.row.is_done)
-          .filter((g) => band === 'all' || (!g.row.is_done && g.info.state !== 'abandoned' && bandFor(g.info.daysLeft) === band))
-          .map((g) => ({ view: v, goal: g })),
-      ),
-    [active, showDone, band],
+  const rows = active.flatMap((v) =>
+    v.goals
+      .filter((g) => showDone || !g.row.is_done)
+      .filter((g) => band === 'all' || (!g.row.is_done && g.info.state !== 'abandoned' && bandFor(g.info.daysLeft) === band))
+      .map((g) => ({ view: v, goal: g })),
   );
 
   if (isLoading) return <p role="status">Loading…</p>;

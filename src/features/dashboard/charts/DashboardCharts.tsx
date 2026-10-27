@@ -213,7 +213,8 @@ function StatusMixChart({ data, t }: { data: DashboardData; t: ChartTheme }) {
 
 /** Chart 6: am I neglecting an area of my life? */
 function Balance({ data, t }: { data: DashboardData; t: ChartTheme }) {
-  const hasPrevious = data.categories.some((c) => c.previousPct !== null);
+  // Draw the previous shape only when every area has history; a missing value isn't 0%.
+  const hasPrevious = data.categories.length > 0 && data.categories.every((c) => c.previousPct !== null);
   const option = {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'item' },

@@ -97,7 +97,8 @@ export function focusItems(elements: readonly AdviceElement[], today: IsoDate, m
     const behind = isBehindPace(pace.actualPct, pace.expectedPct);
     for (const g of el.goals) {
       const info = describeGoal(g, today);
-      if (info.state !== 'open' && info.state !== 'overdue') continue; // done, not started yet, or abandoned
+      // Done and abandoned goals drop out; a goal not started yet still counts if it's due soon.
+      if (info.state === 'done' || info.state === 'abandoned') continue;
       if (info.daysLeft > maxDays) continue;
       items.push({
         goalId: g.id,

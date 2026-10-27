@@ -33,21 +33,18 @@ function useSnapshots(from: IsoDate) {
     enabled: !!supabase && !!user,
     queryFn: async (): Promise<Snapshot[]> => {
       const { data, error } = await supabase!
-        .from('daily_snapshots')
-        .select('snapshot_date, element_id, category_id, status, goals_total, goals_done, overdue_count, abandoned_count, due_soon_count')
-        .gte('snapshot_date', from)
-        .order('snapshot_date');
+        .rpc('snapshot_totals', { p_from: from });
       if (error) throw error;
+      // Summed per category and day on the server (a few hundred rows at most), counting only
+      // elements that are active now.
       return data.map((r) => ({
         date: r.snapshot_date,
-        elementId: r.element_id,
         categoryId: r.category_id,
-        status: r.status,
         goalsTotal: r.goals_total,
         goalsDone: r.goals_done,
-        overdue: r.overdue_count,
-        abandoned: r.abandoned_count,
-        dueSoon: r.due_soon_count,
+        overdue: r.overdue,
+        abandoned: r.abandoned,
+        dueSoon: r.due_soon,
       }));
     },
   });
@@ -121,7 +118,7 @@ export function useDashboard(kind: PeriodKind, custom?: DateRange) {
     const doneDates = adviceElements.flatMap((e) => e.goals.map((g) => g.doneDate).filter((d): d is IsoDate => !!d));
     const snaps = snapshots.data ?? [];
     const totals = liveTotals(active);
-    const kpis = computeKpis({ period, today: totals, doneDates, snapshots: snaps });
+    const kpis = computeKpis({ period, asOf: today, today: totals, doneDates, snapshots: snaps });
     const byKey = Object.fromEntries(kpis.map((k) => [k.key, k]));
 
     const categorySummaries: CategorySummary[] = (categories.data ?? []).map((c) => {

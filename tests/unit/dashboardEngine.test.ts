@@ -89,7 +89,7 @@ describe('periods (Monday weeks, like-for-like comparison)', () => {
 });
 
 function snap(date: string, patch: Partial<Snapshot> = {}): Snapshot {
-  return { date, elementId: 'e1', categoryId: 'c1', status: 'in_progress', goalsTotal: 4, goalsDone: 1, overdue: 0, abandoned: 0, dueSoon: 1, ...patch };
+  return { date, categoryId: 'c1', goalsTotal: 4, goalsDone: 1, overdue: 0, abandoned: 0, dueSoon: 1, ...patch };
 }
 
 describe('KPIs (acceptance test 10: this week vs last week from snapshot fixtures)', () => {
@@ -98,20 +98,20 @@ describe('KPIs (acceptance test 10: this week vs last week from snapshot fixture
   const snapshots: Snapshot[] = [
     snap('2026-10-20', { goalsDone: 0, overdue: 2 }),
     snap('2026-10-21', { goalsDone: 1, overdue: 1, dueSoon: 2 }),
-    snap('2026-10-21', { elementId: 'e2', goalsTotal: 2, goalsDone: 1, overdue: 0, dueSoon: 0 }),
-    snap('2026-10-21', { elementId: 'e3', status: 'decommissioned', goalsTotal: 10, goalsDone: 0, overdue: 5 }),
+    snap('2026-10-21', { categoryId: 'c2', goalsTotal: 2, goalsDone: 1, overdue: 0, dueSoon: 0 }),
     snap('2026-10-26', { goalsDone: 2 }),
     snap('2026-10-27', { goalsDone: 2, abandoned: 1 }),
   ];
   const kpis = computeKpis({
     period,
+    asOf: '2026-10-28',
     today: { goalsTotal: 6, goalsDone: 4, overdue: 0, abandoned: 1, dueSoon: 2 },
     doneDates: ['2026-10-20', '2026-10-21', '2026-10-26', '2026-10-28', '2026-10-28', '2026-10-15'],
     snapshots,
   });
   const byKey = Object.fromEntries(kpis.map((k) => [k.key, k]));
 
-  it('overall completion compares today with the same weekday last week, ignoring decommissioned elements', () => {
+  it('overall completion compares today with the same weekday last week, across categories', () => {
     // Last Wednesday: (1 + 1) done of (4 + 2) = 33%; today 4 of 6 = 67%.
     expect(byKey.completion).toMatchObject({ value: 67, previous: 33, delta: 34, goodWhenUp: true, unit: '%' });
   });
@@ -133,12 +133,25 @@ describe('KPIs (acceptance test 10: this week vs last week from snapshot fixture
   });
 
   it('with no history, deltas are null rather than invented', () => {
-    const fresh = computeKpis({ period, today: { goalsTotal: 2, goalsDone: 1, overdue: 0, abandoned: 0, dueSoon: 1 }, doneDates: [], snapshots: [] });
+    const fresh = computeKpis({ period, asOf: '2026-10-28', today: { goalsTotal: 2, goalsDone: 1, overdue: 0, abandoned: 0, dueSoon: 1 }, doneDates: [], snapshots: [] });
     expect(fresh.find((k) => k.key === 'completion')).toMatchObject({ value: 50, previous: null, delta: null, series: [50] });
   });
 
+  it('a custom range that ended in the past shows its last day, not today', () => {
+    const past = periodPair('custom', '2026-10-28', { start: '2026-10-19', end: '2026-10-21' });
+    const k = computeKpis({ period: past, asOf: '2026-10-28', today: { goalsTotal: 6, goalsDone: 6, overdue: 0, abandoned: 0, dueSoon: 0 }, doneDates: [], snapshots });
+    const overdue = k.find((x) => x.key === 'overdue')!;
+    expect(overdue.value).toBe(1); // 21 Oct, not today's 0
+    expect(overdue.series).toEqual([2, 1]); // 20 and 21 Oct from snapshots; no live point
+    // A range ending in the future runs to today, with today's live figure last.
+    const future = periodPair('custom', '2026-10-28', { start: '2026-10-26', end: '2026-11-05' });
+    const f = computeKpis({ period: future, asOf: '2026-10-28', today: { goalsTotal: 6, goalsDone: 6, overdue: 0, abandoned: 0, dueSoon: 0 }, doneDates: [], snapshots });
+    expect(f.find((x) => x.key === 'completion')).toMatchObject({ value: 100, series: [50, 50, 100] });
+  });
+
   it('category % at a past point comes from that category’s snapshots', () => {
-    expect(categoryPctAt(snapshots, 'c1', period.previous)).toBe(33);
+    expect(categoryPctAt(snapshots, 'c1', period.previous)).toBe(25);
+    expect(categoryPctAt(snapshots, 'c2', period.previous)).toBe(50);
     expect(categoryPctAt(snapshots, 'other', period.previous)).toBeNull();
     expect(totalsByDay(snapshots).get('2026-10-21')).toEqual({ goalsTotal: 6, goalsDone: 2, overdue: 1, abandoned: 0, dueSoon: 2 });
   });
@@ -182,7 +195,7 @@ function el(id: string, goals: AdviceGoal[], patch: Partial<AdviceElement> = {})
 const TODAY = '2026-10-28';
 
 describe('Focus Now and Keep Tabs On (§7.1)', () => {
-  it('orders overdue first, then 0–14 days, then 15–29; skips done, abandoned, future and far goals', () => {
+  it('orders overdue first, then 0–14 days, then 15–29; skips done, abandoned and far goals', () => {
     const items = focusItems(
       [
         el('a', [goal('a1', '2026-11-10'), goal('a2', '2026-10-26'), goal('a3', '2026-11-20')]),
@@ -191,12 +204,13 @@ describe('Focus Now and Keep Tabs On (§7.1)', () => {
           goal('b2', '2026-10-10'), // abandoned
           goal('b3', '2026-10-29', { isDone: true }),
           goal('b4', '2026-12-30'), // 63 days: too far
-          goal('b5', '2026-11-20', { startDate: '2026-11-05' }), // not started yet
+          goal('b5', '2026-11-20', { startDate: '2026-11-05' }), // not started yet, but due in 23 days: included
         ]),
       ],
       TODAY,
     );
-    expect(items.map((i) => i.goalId)).toEqual(['a2', 'b1', 'a1', 'a3']);
+    // a3 and b5 are both 23 days out; a3 weighs more (1 of 3 goals vs 1 of 5).
+    expect(items.map((i) => i.goalId)).toEqual(['a2', 'b1', 'a1', 'a3', 'b5']);
     expect(items[0]).toMatchObject({ band: 'overdue', daysLeft: -2, daysToAbandonment: 5 });
   });
 
