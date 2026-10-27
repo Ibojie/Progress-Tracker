@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
 import { clearOfflineData } from '@/lib/offlineStorage';
+import { disablePush, forgetDevicePush } from '@/features/notifications/push';
 
 interface AuthContextValue {
   session: Session | null;
@@ -47,7 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = supabase.auth.onAuthStateChange((event, next) => {
       // A session can also end without tapping Sign out (expired or revoked), and a different
       // person can sign in on the same device: in both cases drop the saved data and queue.
-      if (event === 'SIGNED_OUT' || (next && isDifferentUser(next.user.id))) void clearOfflineData(queryClient);
+      if (event === 'SIGNED_OUT' || (next && isDifferentUser(next.user.id))) {
+        void clearOfflineData(queryClient);
+        // ...and stop the previous user's reminders arriving on this device.
+        void forgetDevicePush().catch(() => {});
+      }
       if (next) rememberUser(next.user.id);
       setSession(next);
       setLoading(false);
@@ -59,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    // Stop this device getting the next person's (or a signed-out user's) reminders.
+    await disablePush().catch(() => {});
     await supabase?.auth.signOut();
     // Don't leave a copy of the user's data on a shared or lost device.
     await clearOfflineData(queryClient);

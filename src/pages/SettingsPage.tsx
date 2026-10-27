@@ -12,6 +12,7 @@ import { useMutationState } from '@tanstack/react-query';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { isQueuedKey } from '@/features/elements/offlineQueue';
 import { InstallCard } from '@/features/pwa/InstallPrompt';
+import { NotificationSettings } from '@/features/notifications/NotificationSettings';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -70,6 +71,8 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
+        <NotificationSettings />
+
         <Card>
           <CardHeader>
             <CardTitle>Account</CardTitle>
@@ -112,9 +115,7 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        <ComingSoon phase={5}>
-          Timezone, notification channels, quiet hours, the AI summary switch and data export.
-        </ComingSoon>
+        <ComingSoon phase={6}>The AI summary switch and data export.</ComingSoon>
       </div>
     </>
   );

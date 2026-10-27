@@ -4,7 +4,7 @@ A personal Progressive Web App for tracking goals and deadlines in four areas of
 
 The full specification is in [`docs/PROGRESS_TRACKER_BUILD_PROMPT.md`](docs/PROGRESS_TRACKER_BUILD_PROMPT.md). Assumptions are logged in [`DECISIONS.md`](DECISIONS.md) and releases in [`CHANGELOG.md`](CHANGELOG.md).
 
-**Status:** Phase 4 (installable app and offline use) released as v0.4.0. Live at https://progress-tracker-phi-five.vercel.app. See the changelog for what works today.
+**Status:** Phase 5 (notifications) in progress. Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
 
 ## Stack
 
@@ -35,11 +35,12 @@ Without the two Supabase values the app still starts and shows a setup screen.
 |---|---|---|
 | `VITE_SUPABASE_URL` | `.env.local`, Vercel | Project URL, public |
 | `VITE_SUPABASE_ANON_KEY` | `.env.local`, Vercel | Publishable key, public (RLS protects the data) |
-| `VITE_VAPID_PUBLIC_KEY` | `.env.local`, Vercel | Phase 5 |
+| `VITE_VAPID_PUBLIC_KEY` | optional | Push public key, safe to share. Built into `src/features/notifications/push.ts`; set this only to override it |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Function secrets only | Never in the client or the repo |
-| `RESEND_API_KEY` | Supabase secrets | Phase 5 |
+| `RESEND_API_KEY` | Supabase secrets | Resend key with sending access to `notify.thebusinessapostle.net` |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Supabase secrets | Phase 6 |
-| `VAPID_PRIVATE_KEY` | Supabase secrets | Phase 5 |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Supabase secrets | Push key pair; the subject is the operator contact (`mailto:`) |
+| `APP_URL`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Supabase secrets, optional | Defaults: the production URL, `reminders@notify.thebusinessapostle.net`, the owner's inbox |
 
 `.env*` files are git-ignored except `.env.example`. CI runs a gitleaks secret scan on every push.
 
@@ -59,10 +60,25 @@ npx supabase db push
 
 Under **Authentication → URL Configuration**:
 
-- **Site URL:** the production URL (for example `https://progress-tracker.vercel.app`)
-- **Redirect URLs:** `http://localhost:5173/auth/callback` and `https://<your-vercel-domain>/auth/callback` (add `https://*-ibojie-celestines-projects.vercel.app/auth/callback` for preview deployments)
+- **Site URL:** `https://progress.thebusinessapostle.net`
+- **Redirect URLs:** `http://localhost:5173/auth/callback`, `https://progress.thebusinessapostle.net/auth/callback`, `https://progress-tracker-phi-five.vercel.app/auth/callback`, and `https://*-ibojie-celestines-projects.vercel.app/auth/callback` for preview deployments
 
-Google sign-in is optional: enable it under **Authentication → Providers → Google** with a Google OAuth client ID and secret.
+**Google sign-in** is on: **Authentication → Providers → Google**, with the OAuth client "Progress Tracker" from the Google Cloud project `project-tracker-512809`. Its authorised redirect URI is `https://nvfhyxnmazhtnlqguerr.supabase.co/auth/v1/callback`. The consent screen is in Testing until the privacy policy is published.
+
+## Notifications
+
+- **Email** is sent through Resend from `notify.thebusinessapostle.net` (DKIM and SPF records in the SirSteveHQ DNS zone).
+- **Push** uses Web Push with the VAPID keys above.
+- **Every hour at :00**, a pg_cron job calls the `notify` Edge Function with a shared secret kept in Supabase Vault (`notify_cron_token`, created by the migration). The function:
+  1. queues the alerts due for every user whose local time is 07:00, or the end of their quiet hours (`queue_notifications`), then
+  2. delivers every waiting push and email, retrying failures up to 5 times.
+- In-app alerts appear in the bell at the top of the screen.
+
+Deploy the function after `db push`:
+
+```bash
+npx supabase functions deploy notify
+```
 
 ## Deploy
 

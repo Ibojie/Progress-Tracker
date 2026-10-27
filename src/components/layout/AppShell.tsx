@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { Target } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { OfflineBanner } from '@/features/pwa/OfflineBanner';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { cn } from '@/lib/utils';
 import { NAV_ITEMS } from './nav';
 
@@ -60,7 +61,10 @@ export function AppShell() {
           <span className="lg:invisible">
             <Brand />
           </span>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
         </header>
         <OfflineBanner />
         </div>

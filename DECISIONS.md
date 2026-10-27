@@ -234,7 +234,45 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 8. **Live regions stay mounted:** the offline banner and the update prompt keep their screen-reader region in place and only change its text, so the change is announced.
 9. **The offline banner is part of the sticky header,** so it can't slide under it on phones with a notch.
 
+## Custom domain and Google sign-in (after Phase 4)
+- **Domain:** `progress.thebusinessapostle.net` is a CNAME to Vercel in the SirSteveHQ DNS zone. It must not also be added as a domain in the hosting panel: that adds A records that override the CNAME.
+- **Google sign-in:** the Google Cloud project "Progress Tracker" (`project-tracker-512809`), a Web client, and the Supabase Google provider. Tested by the owner on production. The consent screen stays in **Testing** (only listed test users can sign in) until the privacy policy and terms are published.
+
+## Phase 5: notifications
+- **The database decides, the Edge Function delivers.** `queue_notifications` (SQL) writes every alert into `notification_log`, so the rules are tested with the real migrations, like the status engine. The `notify` Edge Function only sends what is waiting there and records the result.
+- **Send time:** 07:00 in each user's own timezone, not 07:00 Lagos for everyone. The job runs hourly and picks users whose local hour is their send hour. If quiet hours cover 07:00, alerts wait until the hour quiet hours end (rounded up).
+- **Never twice:** the unique key on `notification_log` (user, goal, element, kind, channel, day) blocks repeats on the same day. Delivery claims rows (`claim_deliveries`, `for update skip locked`), so overlapping runs can't double-send. Failures are retried up to 5 times within a day.
+- **"Becomes abandoned"** alerts on the day a goal passes 7 days overdue (day 8). An element that becomes Abandoned is announced once, until it is restarted or switched back on.
+- **Weekly nudges** (Resource Delay over 7 days, no ticks for 14 days) go out at most once every 7 days per element.
+- **Email switch:** the profile's `email_digest_enabled` covers all email: alerts and the Monday digest.
+- **Push switch:** per device. The profile's `push_enabled` stays on while any device is subscribed. Signing out unsubscribes the device, so a shared phone never shows the previous user's reminders.
+- **Scheduler secret:** generated inside the database into Supabase Vault by the migration, so no person handles it. The function checks it with `notify_token_ok`, which only the service role can call. The function's gateway JWT check is off (`verify_jwt = false`) because the scheduler has no user token; the test push checks the user's token itself.
+- **Email sender:** `Progress Tracker <reminders@notify.thebusinessapostle.net>`, with replies going to the owner's inbox. A sub-domain keeps the main domain's email reputation separate. Receiving is off.
+- **VAPID subject:** `mailto:ibojie@gmail.com` for now. To be switched to a support address with the legal documents.
+- **Digest:** the Monday email covers last week (Monday to Sunday) against the week before: goals completed, overall completion, due in 14 days, overdue, abandoned, and up to 10 Focus Now goals. The AI narrative is added in Phase 6.
+
+### Code review fixes (independent reviewer, before merging Phase 5)
+1. **High: a shared device kept the last user's push.**
+   - Any sign-out, expired session or user switch now unsubscribes the device in the browser.
+   - Devices are saved only through `register_push_subscription`, which moves an endpoint to whoever is signed in on it.
+2. **High: one goal's push replaced another's.** Pushes are now tagged per goal (or per element for element alerts), not per element page.
+3. **Stalled from the right time:** it counts from the latest of the last tick, creation/restart, the first start date and when the current status began.
+4. **Catch-up:** alerts queue from the send hour onward (outside quiet hours), so one failed run doesn't lose a day's alerts. The unique key keeps re-runs safe.
+5. **Delivery safety:**
+   - Resend gets an idempotency key per alert;
+   - emails are spaced 600ms apart;
+   - a run stops taking work after 100 seconds and hands the rest to the next hour.
+6. **Stale alerts:** waiting push and email for ticked goals or switched-off elements are dropped before sending.
+7. **Push addresses:** they must be https, and FCM, Mozilla, Apple or Windows push services, both in the database function and in the Edge Function.
+8. **Smaller fixes:**
+   - `//host` links are rejected;
+   - the badge clears on sign-out;
+   - 44px switch tap areas;
+   - quiet hours save on change;
+   - permission is requested first on iPhone;
+   - user-lookup errors are reported.
+
 ## Open questions for the owner
-- A custom domain, if wanted (production runs on the Vercel default domain for now).
-- **Google sign-in (owner request, scheduled right after Phase 4):** the owner creates a Google OAuth client, then we enable the Google provider in Supabase.
+- **Google sign-in, left to do:** delete the old (hidden) client secret in Google Cloud, and publish the consent screen once the legal documents exist.
+- **VAPID subject:** switch to a support address (for example `mailto:support@thebusinessapostle.net`) when one exists.
 - **After all phases (owner request):** a Privacy Policy, Terms of Service, Fair Use and Refund policies, plus in-app account deletion, as Google Play requires.
