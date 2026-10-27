@@ -24,3 +24,23 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
 export function addDays(date: IsoDate, days: number): IsoDate {
   return new Date(utcDay(date) + days * MS_PER_DAY).toISOString().slice(0, 10);
 }
+
+/** The calendar date of an instant in the given timezone. */
+export function dateIn(timestamp: string, timeZone: string = DEFAULT_TIMEZONE): IsoDate {
+  return formatInTimeZone(new Date(timestamp), timeZone, 'yyyy-MM-dd');
+}
+
+/** Monday = 0 … Sunday = 6 (weeks start on Monday, §2). */
+export function weekdayIndex(date: IsoDate): number {
+  return (new Date(utcDay(date)).getUTCDay() + 6) % 7;
+}
+
+/** Every date from start to end inclusive. */
+export function eachDay(start: IsoDate, end: IsoDate): IsoDate[] {
+  const n = daysBetween(start, end);
+  return Array.from({ length: Math.max(0, n + 1) }, (_, i) => addDays(start, i));
+}
+
+export function laterOf(a: IsoDate, b: IsoDate): IsoDate {
+  return a > b ? a : b;
+}

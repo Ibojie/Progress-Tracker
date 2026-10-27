@@ -120,6 +120,69 @@ The database fixes are in migration `20261026000300_phase2_review_fixes.sql`.
    - The timezone must be a real timezone name.
    - Date-reset history can only be written by `reset_goal_date`, never directly by the app.
 
+## Phase 3: dashboard
+
+### Periods and KPIs
+- **Like-for-like comparison:** the current period runs from its start (Monday, the 1st of the month, or the quarter start) to today. It is compared with the **same stretch** of the previous period: on a Wednesday, Mon–Wed this week vs Mon–Wed last week. A custom range is compared with the same number of days just before it.
+- **KPI sources:**
+  - "Goals completed" counts completion dates (in your timezone) inside each range.
+  - Overall completion, due in 14 days, overdue and abandoned compare today's live figure with the last nightly snapshot on or before the matching day of the previous period.
+  - With no snapshot yet, the tile says "No history yet" rather than inventing a change.
+- **Good or bad direction:** a rise in completion or goals completed is good (green ▲). A rise in overdue, due-soon or abandoned is bad (red ▲). Arrows and words are shown alongside the colour.
+- **Sparklines** are plain SVG: tiny lines with no axes or hover, so ECharts would add size for nothing. Their values are in the tile's accessible label.
+
+### Nightly snapshots
+- **Where it runs:** the job runs inside the database (`pg_cron`, 22:55 UTC = 23:55 Lagos, no daylight saving) and calls `take_daily_snapshots()`. There is no Edge Function, so no secret keys are needed for it.
+- **Same rules as the app:** the status rules are mirrored in SQL (`engine_element_status`). A test compares the SQL and TypeScript versions on 300 random elements × 5 dates (1,500 cases) on every CI run.
+- **Extra snapshot columns:** `overdue_count`, `abandoned_count` and `due_soon_count`, so those KPIs have history too.
+- **What the job writes:** for each user, it uses that user's own "today", upserts one row per element (re-running is safe), and logs a status change with the reason "Nightly check". The same status is never logged twice in a row.
+- **Decommissioned elements** are snapshotted with that status, and every chart and KPI leaves them out.
+
+### Advice
+- **Focus Now strip:** overdue plus 0–14 days. The advice card's "Focus on" list extends to 29 days, as §7.1 says.
+- **Urgency score:**
+  - Overdue goals score 100 + 5 per day overdue (capped at 7 days).
+  - Other goals score 60 − 2 × days left.
+  - Add 0.3 × the goal's weight (100 / number of goals), and +10 if the element is behind pace.
+  - Within each group (overdue, 0–14, 15–29), the highest score comes first.
+- **Pace:** expected % is the average, across goals, of the share of each goal's time that has passed. "Behind pace" means more than 15 points under that.
+- **Stalls:**
+  - "No ticks" uses the newest tick time, so it fires at 14+ days.
+  - Resource Delay and Started-at-0% count from the later of the start date and when the status was recorded, and fire at more than 7 days.
+- **Wins:** elements whose last goal was completed in this period, plus the category with the biggest rise since the same point of the previous period.
+
+### Charts
+- **Colours:**
+  - Categories use the validated categorical order from the dataviz guidelines: blue `#2A78D6`, orange `#EB6834`, aqua `#1BAF7A`, yellow `#EDA100`, with their dark-mode steps.
+  - The current period is blue; the previous period is a muted grey and dashed.
+  - Status and band colours are reserved for status and band only.
+- **Accessibility:** every chart has a title, a one-line question, a tooltip, a legend for two or more series, and a **Table** switch. The drawn chart carries an accessible label pointing to the table.
+- **Clicking a chart:** gauges and bars open the category, a status-mix segment opens the category filtered by status, and a donut segment opens the Timeline filtered by band.
+- **Deadline calendar and Timeline are HTML, not ECharts,** so every day and every bar is a real, keyboard-reachable control or link. Calendar cells are 40px with 14–16px numbers, and the grid scrolls inside its own box on phones.
+- **Charts load separately:** ECharts (≈600 KB) loads only with the charts, using modular imports and the SVG renderer. The main bundle's size is left for the Phase 7 performance pass.
+
+### Responsive charts (owner request)
+- **Every chart works at any width.** Checked with sample data at 320, 390, 768 and 1280px, in light and dark mode: no sideways page scroll, no labels outside their card, and no chart text under 16px on phones.
+- **Gauges** are a grid of small charts: 2 per row on phones, 3 on tablets, 5 on desktop. Each is a link to its area.
+- **Bar charts turn horizontal on phones,** so area names fit (the readable-content rule for long labels).
+- **Legends are HTML lists under each chart.** They wrap onto new lines on any screen and screen readers can read them. ECharts' own legend squeezed into one scrolling line on phones.
+- **Radar on phones:** a smaller radar, with names wrapped onto two lines, so the side labels stay inside the card.
+- **Short label in charts:** "Personal Development" shows as "Personal Dev.", at the owner's request. Tables keep the full name.
+- **Developer-only preview:** `/__dev/charts` renders the real charts with sample data, so layouts can be checked without signing in. It only exists in the local development build; production builds leave it out.
+
+### Code review fixes (independent reviewer, before merging Phase 3)
+The database fixes are in `20261027000100_snapshot_totals.sql`.
+
+1. **Snapshot history is summed on the server** (`snapshot_totals`). The app used to download one row per element per day, and the API stops at 1,000 rows, so history was cut off after about 20 elements on the month view. Now it's at most days × 4 rows.
+2. **Switched-off elements leave the history comparisons too.** Before, switching off an element with 3 overdue goals made Overdue show "▼3" in green. Totals now count only elements that are active today, on every past day (acceptance test 9).
+3. **A custom range that ended in the past shows its last day,** not today's live figures. A range ending in the future runs to today.
+4. **Focus Now includes goals that haven't started but are due within 14 days,** matching the "Due in 14 days" tile.
+5. **Snapshots are taken at the end of each user's own day.** The job runs hourly at :55 and only snapshots users whose local time is 23:xx. Lagos users still get 23:55.
+6. **The parity test also covers a tick at exactly the switch-on or restart moment.**
+7. **Colour contrast:** the previous-period grey is now slate-500 `#64748B` (4.8:1 on white).
+   - The category yellow `#EDA100` is kept, because it's from the validated palette. It falls under the palette's "relief rule": every gauge also shows its name and % as text, and every chart has a table.
+8. **The radar's previous-period shape** is drawn only when every area has history. A missing value isn't 0%.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
 - A Google OAuth client is needed if Google sign-in is wanted (optional).

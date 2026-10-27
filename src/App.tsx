@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { AppShell } from '@/components/layout/AppShell';
@@ -15,6 +16,9 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { SetupPage } from '@/pages/SetupPage';
 import { TimelinePage } from '@/pages/TimelinePage';
 
+// Development-only layout check for the charts; the import is dropped from production builds.
+const ChartsPreview = import.meta.env.DEV ? lazy(() => import('@/dev/ChartsPreview')) : null;
+
 export function App() {
   if (!supabase) return <SetupPage />;
 
@@ -24,6 +28,16 @@ export function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        {ChartsPreview && (
+          <Route
+            path="/__dev/charts"
+            element={
+              <Suspense fallback={null}>
+                <ChartsPreview />
+              </Suspense>
+            }
+          />
+        )}
         <Route
           element={
             <RequireAuth>

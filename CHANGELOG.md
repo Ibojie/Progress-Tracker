@@ -2,6 +2,30 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-10-27 - Phase 3: dashboard
+
+### Added
+- **Focus Now strip:** every overdue goal and every goal due within 14 days, most urgent first, each with a one-tap tick. Always shown.
+- **KPI tiles:** overall completion, goals completed, due in 14 days, overdue and abandoned, each with a ▲/▼ change against the same point of the previous period and a sparkline.
+- **Period switcher:** week, month, quarter or custom, with Monday weeks in your timezone. The choice is remembered.
+- **Rule-based advice:** summary, focus list, behind pace, keep tabs on, stalls and wins.
+- **Charts:** completion gauges, goals completed by area, momentum, status mix, open goals by urgency, a 90-day deadline calendar, and a balance radar.
+  - Each has a table view, and clicking one opens the matching elements.
+  - They adapt to phones, tablets and desktop.
+- **Burndown chart** on every element page.
+- **Timeline:** a Gantt view of all goals, with band colours, a Today line, filters, and sideways scrolling on phones.
+- **Nightly snapshots** at the end of each user's day (pg_cron, hourly at :55). They power the trends and log date-driven status changes.
+  - The status rules are mirrored in SQL and checked against the app on 1,500 random cases.
+- **`snapshot_totals` database function:** daily history summed on the server.
+
+### Fixed (from the Phase 3 code review)
+- History comparisons leave out elements that are switched off now.
+- History is no longer cut off at 1,000 rows.
+- A custom range in the past shows its own figures.
+- Focus Now includes soon-due goals that haven't started yet.
+- The previous-period grey has enough contrast on white.
+- The radar no longer draws a missing value as 0%.
+
 ## [0.2.0] - 2026-10-26 - Phase 2: elements, goals and the status engine
 
 ### Added
