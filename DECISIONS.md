@@ -218,7 +218,10 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 
 ### Owner's phone test (acceptance test 13)
 - **Passed on Android Chrome:** installed the app, opened it in airplane mode with saved data, ticked and edited offline, kept both changes across a restart, then reconnected. Both changes reached the database.
-- **Known quirk:** a tick made offline is timed when it **reaches the server** (the database sets `done_at` and `tick_changed_at`), not when it was tapped. If you reconnect on a later day, "goals completed" counts it on that day. Left as is for now; it can be fixed later by sending the device's tick time with queued ticks.
+- **Tick times (fixed at the owner's request after the phone test):** ticks are now saved through `tick_goal`, which records **when the box was tapped on the device**. Before, an offline tick was timed when it reached the server, so a late reconnect counted it on the wrong day.
+  - The server limits the time: never in the future, and never more than 7 days back (the offline data limit).
+  - Only `tick_goal` can supply a time, through a transaction-local setting the API can't reach.
+  - Ordinary updates still use the server clock.
 
 ### Code review fixes (independent reviewer, before merging Phase 4)
 1. **Critical: opening the app while already offline.** TanStack Query assumes it starts online, so a reopened app tried to send its queue straight away, failed, and dropped it. The app now sets the real connection state (`navigator.onLine`) before anything runs.

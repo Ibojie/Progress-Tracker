@@ -16,6 +16,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Dropped connections are retried with back-off. An update the server didn't apply counts as a failure.
 - Saved data is cleared on any sign-out and when a different user signs in.
 - Restored changes that fail show a message. The offline banner and update prompt are announced to screen readers.
+- A tick made offline counts on the day it was tapped, not the day it synced (`tick_goal`).
 
 ## [0.3.0] - 2026-10-27 - Phase 3: dashboard
 
