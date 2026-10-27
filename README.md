@@ -4,7 +4,7 @@ A personal Progressive Web App for tracking goals and deadlines in four areas of
 
 The full specification is in [`docs/PROGRESS_TRACKER_BUILD_PROMPT.md`](docs/PROGRESS_TRACKER_BUILD_PROMPT.md). Assumptions are logged in [`DECISIONS.md`](DECISIONS.md) and releases in [`CHANGELOG.md`](CHANGELOG.md).
 
-**Status:** Phase 5 (notifications) in progress. Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
+**Status:** Phase 5 (notifications) released as v0.5.0. Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
 
 ## Stack
 

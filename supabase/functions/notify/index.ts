@@ -5,7 +5,7 @@
 // Secrets (Supabase → Edge Functions → Secrets): RESEND_API_KEY, VAPID_PUBLIC_KEY,
 // VAPID_PRIVATE_KEY, VAPID_SUBJECT. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0';
-import webpush from 'npm:web-push@3.6.7';
+import { sendWebPush, type VapidKeys } from './webpush.ts';
 import { alertEmail, digestEmail, isPushEndpoint, pushPayload, type AlertRow, type DigestData } from './messages.ts';
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://progress.thebusinessapostle.net';
@@ -32,12 +32,11 @@ function admin(): SupabaseClient {
   });
 }
 
-function setupPush(): boolean {
-  const pub = Deno.env.get('VAPID_PUBLIC_KEY');
-  const priv = Deno.env.get('VAPID_PRIVATE_KEY');
-  if (!pub || !priv) return false;
-  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT') ?? 'mailto:ibojie@gmail.com', pub, priv);
-  return true;
+function vapidKeys(): VapidKeys | null {
+  const publicKey = Deno.env.get('VAPID_PUBLIC_KEY')?.trim();
+  const privateKey = Deno.env.get('VAPID_PRIVATE_KEY')?.trim();
+  if (!publicKey || !privateKey) return null;
+  return { publicKey, privateKey, subject: Deno.env.get('VAPID_SUBJECT')?.trim() || 'mailto:ibojie@gmail.com' };
 }
 
 interface Subscription {
@@ -47,7 +46,7 @@ interface Subscription {
 }
 
 /** Sends to every device of a user. Devices that have gone away (404/410) are removed. */
-async function pushToUser(db: SupabaseClient, userId: string, payload: object): Promise<{ sent: number; error?: string }> {
+async function pushToUser(db: SupabaseClient, vapid: VapidKeys, userId: string, payload: object): Promise<{ sent: number; error?: string }> {
   const { data: subs, error } = await db.from('push_subscriptions').select('id, endpoint, keys').eq('user_id', userId);
   if (error) return { sent: 0, error: error.message };
   let sent = 0;
@@ -58,12 +57,13 @@ async function pushToUser(db: SupabaseClient, userId: string, payload: object): 
       continue;
     }
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(payload), { TTL: 60 * 60 * 12 });
-      sent++;
+      // High urgency: Android otherwise holds normal-priority pushes while the phone is idle.
+      const res = await sendWebPush(s, JSON.stringify(payload), vapid, { ttl: 60 * 60 * 12, urgency: 'high' });
+      if (res.status >= 200 && res.status < 300) sent++;
+      else if (res.status === 404 || res.status === 410) await db.from('push_subscriptions').delete().eq('id', s.id);
+      else lastError = `push ${res.status} ${res.body}`.trim();
     } catch (e) {
-      const status = (e as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410) await db.from('push_subscriptions').delete().eq('id', s.id);
-      else lastError = `push ${status ?? ''} ${(e as Error).message}`.trim();
+      lastError = `push ${(e as Error).message}`;
     }
   }
   return { sent, error: sent === 0 ? (lastError ?? 'no devices') : undefined };
@@ -86,7 +86,7 @@ async function runCron(db: SupabaseClient): Promise<Response> {
   const queued = await db.rpc('queue_notifications');
   if (queued.error) return json(500, { error: queued.error.message });
 
-  const pushReady = setupPush();
+  const vapid = vapidKeys();
   const emails = new Map<string, string | null>();
   const emailOf = async (userId: string) => {
     if (!emails.has(userId)) {
@@ -113,7 +113,7 @@ async function runCron(db: SupabaseClient): Promise<Response> {
     let error: string | null = null;
     try {
       if (row.channel === 'push') {
-        error = pushReady ? ((await pushToUser(db, row.user_id, pushPayload(row))).error ?? null) : 'VAPID keys are not set';
+        error = vapid ? ((await pushToUser(db, vapid, row.user_id, pushPayload(row))).error ?? null) : 'VAPID keys are not set';
       } else {
         const to = await emailOf(row.user_id);
         if (!to) error = 'no email address';
@@ -139,14 +139,22 @@ async function runTest(db: SupabaseClient, req: Request): Promise<Response> {
   const token = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
   const { data, error } = token ? await db.auth.getUser(token) : { data: { user: null }, error: null };
   if (error || !data.user) return json(401, { error: 'Sign in again, then retry.' });
-  if (!setupPush()) return json(500, { error: 'Push isn’t set up on the server yet.' });
-  const result = await pushToUser(db, data.user.id, {
+  const vapid = vapidKeys();
+  if (!vapid) return json(500, { error: 'Push isn’t set up on the server yet.' });
+  const result = await pushToUser(db, vapid, data.user.id, {
     title: 'Test notification',
     body: 'Push notifications are working on this device.',
     url: '/settings',
     tag: 'test',
   });
-  if (result.sent === 0) return json(400, { error: 'No device is subscribed. Turn on push notifications first.' });
+  if (result.sent === 0) {
+    return json(400, {
+      error:
+        result.error === 'no devices'
+          ? 'No device is subscribed. Turn on push notifications first.'
+          : `The push service refused it (${result.error}). Turn push off and on again, then retry.`,
+    });
+  }
   return json(200, { sent: result.sent });
 }
 
