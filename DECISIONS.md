@@ -183,6 +183,40 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
    - The category yellow `#EDA100` is kept, because it's from the validated palette. It falls under the palette's "relief rule": every gauge also shows its name and % as text, and every chart has a table.
 8. **The radar's previous-period shape** is drawn only when every area has history. A missing value isn't 0%.
 
+## Phase 4: installable app and offline use
+
+### Installing
+- **App identity:** the manifest has name "Progress Tracker", short name "Progress", theme `#1E40AF`, `display: standalone` and start URL `/`.
+- **Icons:**
+  - 192px and 512px "any" icons (a rounded tile).
+  - A 512px "maskable" icon, with the mark inside the central 70% so Android can crop it to any shape.
+  - A 180px Apple touch icon.
+  - All are rendered from SVG by `npm run icons` (`scripts/generate-icons.mjs`).
+- **Install prompt:**
+  - Where the browser offers installation (Chrome, Edge, Android), the app shows its own **Install app** button: in a one-time Dashboard banner (it can be hidden) and always under Settings.
+  - On iPhone and iPad, which have no install prompt, the same places show the Share → Add to Home Screen steps. These are needed on iPhone for push reminders in Phase 5 (§9).
+
+### Service worker
+- **Our own service worker** (`src/sw.ts`, Workbox, `injectManifest`), so Phase 5 can add push to it.
+- **What it stores:** the app shell (HTML, JS, CSS, fonts, icons), about 1.6 MB. Every page address opens the stored shell.
+- **What it doesn't store:** Supabase requests. They're never served stale.
+- **Updates:** a new version downloads in the background (checked hourly while the app is open), and the app offers **Update now**. It never reloads by itself, so nothing you're typing is lost.
+- **Caching on Vercel:** `sw.js` and the manifest are served with `Cache-Control: no-cache`, so updates are picked up.
+- **Checked here:** with the local server switched off, the production build still opened and routed from the device copy.
+
+### Offline data and the queue
+- **Your data on the device:** the TanStack Query cache is saved in IndexedDB (via `idb-keyval`) for up to 7 days, so elements, goals and the dashboard are readable offline.
+- **Signing out deletes that copy** from the device. If changes are still waiting to sync, the app warns first.
+- **Queued while offline:** ticking and unticking, editing a goal (title, notes, dates), editing an element (name, description, Started / Resource Delay), and reordering goals.
+  - Each shows on screen at once.
+  - The queue is saved with the cache, and resumes after the app is closed and reopened.
+  - Changes are sent **in order, one at a time** (one TanStack mutation scope).
+- **Online only (owner agreed):** creating an element, adding or deleting a goal or element, Reset date, and switching an element off or on. These depend on server checks or could conflict between devices. Offline, their buttons are disabled with "Needs a connection".
+- **If a queued change fails** when it is finally sent, the screen is corrected from the server and a message explains.
+- **Offline banner:** "Offline · showing your saved data", or "Offline · N changes will sync…", and while sending, "Syncing N changes…".
+- **Status history waits** while queued changes are pending, so it only records statuses the server has confirmed.
+
 ## Open questions for the owner
 - A custom domain, if wanted (production runs on the Vercel default domain for now).
-- A Google OAuth client is needed if Google sign-in is wanted (optional).
+- **Google sign-in (owner request, scheduled right after Phase 4):** the owner creates a Google OAuth client, then we enable the Google provider in Supabase.
+- **After all phases (owner request):** a Privacy Policy, Terms of Service, Fair Use and Refund policies, plus in-app account deletion, as Google Play requires.
