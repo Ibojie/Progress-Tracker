@@ -211,7 +211,7 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
   - Each shows on screen at once.
   - The queue is saved with the cache, and resumes after the app is closed and reopened.
   - Changes are sent **in order, one at a time** (one TanStack mutation scope).
-- **Online only (owner agreed):** creating an element, adding or deleting a goal or element, Reset date, and switching an element off or on. These depend on server checks or could conflict between devices. Offline, their buttons are disabled with "Needs a connection".
+- **Online only (flagged to the owner before building; no objection):** creating an element, adding or deleting a goal or element, Reset date, and switching an element off or on. These depend on server checks or could conflict between devices. Offline, their buttons are disabled with "Needs a connection".
 - **If a queued change fails** when it is finally sent, the screen is corrected from the server and a message explains.
 - **Offline banner:** "Offline · showing your saved data", or "Offline · N changes will sync…", and while sending, "Syncing N changes…".
 - **Status history waits** while queued changes are pending, so it only records statuses the server has confirmed.
