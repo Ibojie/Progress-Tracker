@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
 import { formatDate } from '@/features/elements/model';
 import { BAND_LABEL, STATUS_META, bandColor, weekdayIndex, type Band } from '@/lib/engine';
 import { useTheme } from '@/lib/theme/ThemeProvider';
@@ -15,53 +16,84 @@ import {
 } from '../chartData';
 import type { DashboardData } from '../useDashboard';
 import { ChartCard } from './ChartCard';
-import { axisStyle, baseOption, chartLabel, useChartTheme, type ChartTheme } from './chartTheme';
+import { echarts } from './echarts';
+import { axisStyle, baseOption, chartLabel, gridOption, useChartTheme, type ChartTheme } from './chartTheme';
 
 const short = (d: string) => formatDate(d).replace(/ \d{4}$/, '');
 
-/** Chart 1: how complete is each area of life? One gauge per category plus overall. */
-function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
-  const navigate = useNavigate();
-  const overall = data.kpis.find((k) => k.key === 'completion')?.value ?? 0;
-  const items = [
-    ...data.categories.map((c, i) => ({ name: chartLabel(c.name), value: c.pct, color: t.categories[i % 4]!, key: c.key as string | null })),
-    { name: 'Overall', value: overall, color: t.text, key: null },
-  ];
+/** One small gauge; its own chart so the grid can wrap on narrow screens. */
+function GaugeTile({ value, color, t }: { value: number; color: string; t: ChartTheme }) {
   const option = {
     ...baseOption(t),
     legend: undefined,
-    series: items.map((it, i) => ({
-      type: 'gauge',
-      name: it.name,
-      center: [`${10 + i * 20}%`, '58%'],
-      radius: '34%',
-      startAngle: 220,
-      endAngle: -40,
-      min: 0,
-      max: 100,
-      progress: { show: true, width: 8, roundCap: true, itemStyle: { color: it.color } },
-      axisLine: { lineStyle: { width: 8, color: [[1, t.grid]] } },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      axisLabel: { show: false },
-      pointer: { show: false },
-      title: { offsetCenter: [0, '78%'], color: t.text, fontSize: t.axisFontSize },
-      detail: { offsetCenter: [0, '0%'], formatter: '{value}%', color: t.text, fontSize: t.fontSize + 2, fontWeight: 700 },
-      data: [{ value: it.value, name: it.name }],
-    })),
+    series: [
+      {
+        type: 'gauge',
+        center: ['50%', '58%'],
+        radius: '92%',
+        startAngle: 220,
+        endAngle: -40,
+        min: 0,
+        max: 100,
+        progress: { show: true, width: 10, roundCap: true, itemStyle: { color } },
+        axisLine: { lineStyle: { width: 10, color: [[1, t.grid]] } },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: { show: false },
+        pointer: { show: false },
+        title: { show: false },
+        detail: { offsetCenter: [0, '5%'], formatter: '{value}%', color: t.text, fontSize: t.fontSize + 4, fontWeight: 700 },
+        data: [{ value }],
+      },
+    ],
   };
+  return <ReactEChartsCore echarts={echarts} option={option} notMerge style={{ height: 120, width: '100%' }} opts={{ renderer: 'svg' }} />;
+}
+
+/** Chart 1: how complete is each area of life? One gauge per category plus overall. */
+function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
+  const overall = data.kpis.find((k) => k.key === 'completion')?.value ?? 0;
+  const items = [
+    ...data.categories.map((c, i) => ({ label: chartLabel(c.name), full: c.name, value: c.pct, color: t.categories[i % 4]!, to: `/categories/${c.key}` })),
+    { label: 'Overall', full: 'Overall', value: overall, color: t.text, to: null as string | null },
+  ];
   return (
     <ChartCard
       title="Completion by area"
       question="How complete is each area of my life?"
-      option={option}
-      height={200}
-      onClick={(p) => {
-        const key = items.find((it) => it.name === p.seriesName)?.key;
-        if (key) navigate(`/categories/${key}`);
-      }}
-      table={{ columns: ['Area', '% complete'], rows: [...data.categories.map((c) => [c.name, `${c.pct}%`]), ['Overall', `${overall}%`]] }}
-    />
+      table={{ columns: ['Area', '% complete'], rows: items.map((it) => [it.full, `${it.value}%`]) }}
+    >
+      {/* 2 per row on phones, 3 on tablets, all 5 in a row on wide screens */}
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {items.map((it) => {
+          const body = (
+            <>
+              <div aria-hidden className="min-w-0 overflow-hidden">
+                <GaugeTile value={it.value} color={it.color} t={t} />
+              </div>
+              <p className="text-center text-label font-semibold">{it.label}</p>
+            </>
+          );
+          return (
+            <li key={it.full} className="min-w-0">
+              {it.to ? (
+                <Link
+                  to={it.to}
+                  className="block rounded-md p-1 text-foreground no-underline hover:bg-muted"
+                  aria-label={`${it.full}: ${it.value}% complete`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div className="p-1" role="img" aria-label={`Overall: ${it.value}% complete`}>
+                  {body}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </ChartCard>
   );
 }
 
@@ -69,15 +101,19 @@ function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
 function CompletedBars({ data, t }: { data: DashboardData; t: ChartTheme }) {
   const navigate = useNavigate();
   const rows = completedByCategory(data.adviceElements, data.categories, data.period);
+  // Phones: horizontal bars so the area names have room (readable-content standard).
+  const categoryAxis = { type: 'category', data: rows.map((r) => chartLabel(r.name)), inverse: t.compact, ...axisStyle(t), splitLine: { show: false } };
+  const valueAxis = { type: 'value', minInterval: 1, ...axisStyle(t) };
+  const radius = t.compact ? [0, 4, 4, 0] : [4, 4, 0, 0];
   const option = {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', data: rows.map((r) => chartLabel(r.name)), ...axisStyle(t), splitLine: { show: false } },
-    yAxis: { type: 'value', minInterval: 1, ...axisStyle(t) },
+    grid: gridOption(t),
+    xAxis: t.compact ? valueAxis : categoryAxis,
+    yAxis: t.compact ? categoryAxis : valueAxis,
     series: [
-      { name: data.label.current, type: 'bar', data: rows.map((r) => r.current), itemStyle: { color: t.current, borderRadius: [4, 4, 0, 0] }, barGap: '10%' },
-      { name: `Same point ${data.label.previous}`, type: 'bar', data: rows.map((r) => r.previous), itemStyle: { color: t.previous, borderRadius: [4, 4, 0, 0] } },
+      { name: data.label.current, type: 'bar', data: rows.map((r) => r.current), itemStyle: { color: t.current, borderRadius: radius }, barGap: '10%' },
+      { name: `Same point ${data.label.previous}`, type: 'bar', data: rows.map((r) => r.previous), itemStyle: { color: t.previous, borderRadius: radius } },
     ],
   };
   return (
@@ -85,6 +121,11 @@ function CompletedBars({ data, t }: { data: DashboardData; t: ChartTheme }) {
       title="Goals completed by area"
       question="Am I doing more or less than before?"
       option={option}
+      height={t.compact ? 40 + rows.length * 56 : 260}
+      legend={[
+        { label: data.label.current, color: t.current },
+        { label: `Same point ${data.label.previous}`, color: t.previous },
+      ]}
       onClick={(p) => {
         const row = rows.find((r) => chartLabel(r.name) === p.name);
         if (row) navigate(`/categories/${row.key}`);
@@ -100,7 +141,7 @@ function Momentum({ data, t }: { data: DashboardData; t: ChartTheme }) {
   const option = {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'axis' },
-    grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
+    grid: gridOption(t),
     xAxis: { type: 'category', data: c.days.map((_, i) => `Day ${i + 1}`), boundaryGap: false, ...axisStyle(t), splitLine: { show: false } },
     yAxis: { type: 'value', minInterval: 1, ...axisStyle(t) },
     series: [
@@ -120,6 +161,11 @@ function Momentum({ data, t }: { data: DashboardData; t: ChartTheme }) {
       title="Momentum"
       question="Running total of goals completed: is my momentum improving?"
       option={option}
+      height={260}
+      legend={[
+        { label: data.label.current, color: t.current },
+        { label: `Same days ${data.label.previous}`, color: t.previous, dashed: true },
+      ]}
       table={{
         columns: ['Day', data.label.current, data.label.previous],
         rows: c.days.map((_, i) => [`Day ${i + 1}`, c.current[i] ?? '–', c.previous[i] ?? '–']),
@@ -135,7 +181,7 @@ function StatusMixChart({ data, t }: { data: DashboardData; t: ChartTheme }) {
   const option = {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 8, right: 16, top: mix.statuses.length > 3 ? 72 : 40, bottom: 8, containLabel: true },
+    grid: gridOption(t),
     xAxis: { type: 'value', minInterval: 1, ...axisStyle(t) },
     yAxis: { type: 'category', data: mix.rows.map((r) => chartLabel(r.name)), inverse: true, ...axisStyle(t), splitLine: { show: false } },
     series: mix.statuses.map((s) => ({
@@ -152,6 +198,8 @@ function StatusMixChart({ data, t }: { data: DashboardData; t: ChartTheme }) {
       title="Status mix by area"
       question="Where are things stuck, delayed or abandoned?"
       option={option}
+      height={40 + mix.rows.length * (t.compact ? 52 : 48)}
+      legend={mix.statuses.map((s) => ({ label: STATUS_META[s].label, color: STATUS_META[s].bg }))}
       empty={mix.statuses.length === 0 ? 'Add elements to see their statuses here.' : null}
       onClick={(p) => {
         const row = mix.rows.find((r) => chartLabel(r.name) === p.name);
@@ -171,9 +219,14 @@ function Balance({ data, t }: { data: DashboardData; t: ChartTheme }) {
     tooltip: { ...baseOption(t).tooltip, trigger: 'item' },
     radar: {
       indicator: data.categories.map((c) => ({ name: chartLabel(c.name), max: 100 })),
-      radius: '62%',
-      center: ['50%', '58%'],
-      axisName: { color: t.text, fontSize: t.axisFontSize },
+      // Phones: a smaller radar and names wrapped onto two lines, so side labels stay inside the card.
+      radius: t.compact ? '34%' : '66%',
+      center: ['50%', '52%'],
+      axisName: {
+        color: t.text,
+        fontSize: t.axisFontSize,
+        formatter: (name: string) => (t.compact ? name.split(' ').join('\n') : name),
+      },
       splitLine: { lineStyle: { color: t.grid } },
       splitArea: { show: false },
       axisLine: { lineStyle: { color: t.grid } },
@@ -202,7 +255,11 @@ function Balance({ data, t }: { data: DashboardData; t: ChartTheme }) {
       title="Balance across areas"
       question="Am I neglecting an area of my life?"
       option={option}
-      height={300}
+      height={t.compact ? 260 : 300}
+      legend={[
+        { label: data.label.current, color: t.current },
+        ...(hasPrevious ? [{ label: `Same point ${data.label.previous}`, color: t.previous, dashed: true }] : []),
+      ]}
       table={{
         columns: ['Area', data.label.current, `Same point ${data.label.previous}`],
         rows: data.categories.map((c) => [c.name, `${c.pct}%`, c.previousPct === null ? 'No history yet' : `${c.previousPct}%`]),
@@ -221,12 +278,11 @@ function BandDonut({ data, t }: { data: DashboardData; t: ChartTheme }) {
   const option = {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { ...baseOption(t).legend, bottom: 0, top: undefined },
     series: [
       {
         type: 'pie',
-        radius: ['45%', '70%'],
-        center: ['50%', '45%'],
+        radius: ['45%', '75%'],
+        center: ['50%', '50%'],
         itemStyle: { borderColor: t.surface, borderWidth: 2 },
         label: { show: false },
         data: dist
@@ -240,7 +296,8 @@ function BandDonut({ data, t }: { data: DashboardData; t: ChartTheme }) {
       title="Open goals by urgency"
       question="How much is urgent right now?"
       option={option}
-      height={300}
+      height={t.compact ? 220 : 260}
+      legend={dist.filter((d) => d.count > 0).map((d) => ({ label: `${BAND_LABEL[d.band]} (${d.count})`, color: bandColor(sample[d.band], theme).bg }))}
       empty={total === 0 ? 'No open goals.' : null}
       onClick={(p) => {
         const band = BAND_ORDER.find((b) => BAND_LABEL[b] === p.name);
@@ -339,7 +396,7 @@ export default function DashboardCharts({ data }: { data: DashboardData }) {
       <h2 id="charts-heading" className="mb-4 text-h2 font-semibold">
         Charts
       </h2>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <div className="lg:col-span-2">
           <Gauges data={data} t={t} />
         </div>

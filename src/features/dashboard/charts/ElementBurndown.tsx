@@ -3,7 +3,7 @@ import { useTimezone, useToday } from '@/features/profile/useProfile';
 import { dateIn } from '@/lib/engine';
 import { burndown } from '../chartData';
 import { ChartCard } from './ChartCard';
-import { axisStyle, baseOption, useChartTheme } from './chartTheme';
+import { axisStyle, baseOption, gridOption, useChartTheme } from './chartTheme';
 
 /** Chart 8: will I finish this on time? Goals still open each day vs a straight-line ideal. */
 export default function ElementBurndown({ view }: { view: ElementView }) {
@@ -25,9 +25,9 @@ export default function ElementBurndown({ view }: { view: ElementView }) {
   const option = {
     ...baseOption(t),
     tooltip: { ...baseOption(t).tooltip, trigger: 'axis' },
-    grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
+    grid: gridOption(t),
     xAxis: { type: 'category', data: labels, boundaryGap: false, ...axisStyle(t), splitLine: { show: false } },
-    yAxis: { type: 'value', minInterval: 1, max: view.total, name: 'Open goals', nameTextStyle: { color: t.muted, fontSize: t.axisFontSize }, ...axisStyle(t) },
+    yAxis: { type: 'value', minInterval: 1, max: view.total, ...axisStyle(t) },
     series: [
       {
         name: 'Open goals',
@@ -57,6 +57,10 @@ export default function ElementBurndown({ view }: { view: ElementView }) {
       question="Will I finish this on time? If the solid line stays above the dashed one, you're behind."
       option={option}
       height={260}
+      legend={[
+        { label: 'Open goals', color: t.current },
+        { label: 'Ideal', color: t.ideal, dashed: true },
+      ]}
       table={{
         columns: ['Date', 'Open goals', 'Ideal'],
         rows: data.days.map((d, i) => [formatDate(d), data.actual[i] ?? '–', data.ideal[i]!]),

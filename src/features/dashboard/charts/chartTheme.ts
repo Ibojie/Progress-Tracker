@@ -18,9 +18,11 @@ export interface ChartTheme {
   ideal: string;
   fontSize: number;
   axisFontSize: number;
+  /** Phone-width screen (≤ 760px): legends go below, bar charts turn horizontal. */
+  compact: boolean;
 }
 
-const LIGHT: Omit<ChartTheme, 'fontSize' | 'axisFontSize'> = {
+const LIGHT: Omit<ChartTheme, 'fontSize' | 'axisFontSize' | 'compact'> = {
   text: '#0F172A',
   muted: '#475569',
   grid: 'rgba(15, 23, 42, 0.12)',
@@ -28,11 +30,11 @@ const LIGHT: Omit<ChartTheme, 'fontSize' | 'axisFontSize'> = {
   surface: '#FFFFFF',
   categories: ['#2A78D6', '#EB6834', '#1BAF7A', '#EDA100'],
   current: '#2A78D6',
-  previous: '#94A3B8',
-  ideal: '#64748B',
+  previous: '#64748B', // slate-500: 4.8:1 on white (chart marks need 3:1)
+  ideal: '#475569',
 };
 
-const DARK: Omit<ChartTheme, 'fontSize' | 'axisFontSize'> = {
+const DARK: Omit<ChartTheme, 'fontSize' | 'axisFontSize' | 'compact'> = {
   text: '#F1F5F9',
   muted: '#B0BED0',
   grid: 'rgba(241, 245, 249, 0.14)',
@@ -40,8 +42,8 @@ const DARK: Omit<ChartTheme, 'fontSize' | 'axisFontSize'> = {
   surface: '#161E30',
   categories: ['#3987E5', '#D95926', '#199E70', '#C98500'],
   current: '#3987E5',
-  previous: '#64748B',
-  ideal: '#94A3B8',
+  previous: '#94A3B8', // 6:1 on the dark surface
+  ideal: '#B0BED0',
 };
 
 const PHONE = '(max-width: 760px)';
@@ -57,7 +59,7 @@ export function useChartTheme(): ChartTheme {
     mql.addEventListener('change', on);
     return () => mql.removeEventListener('change', on);
   }, []);
-  return { ...(theme === 'dark' ? DARK : LIGHT), fontSize: phone ? 16 : 14, axisFontSize: phone ? 16 : 13 };
+  return { ...(theme === 'dark' ? DARK : LIGHT), fontSize: phone ? 16 : 14, axisFontSize: phone ? 16 : 13, compact: phone };
 }
 
 /** Shared tooltip, legend and axis styling. */
@@ -71,9 +73,15 @@ export function baseOption(t: ChartTheme) {
       textStyle: { color: t.text, fontSize: t.fontSize },
       confine: true,
     },
-    legend: { top: 0, textStyle: { color: t.text, fontSize: t.fontSize }, itemGap: 16 },
+    // Legends are drawn in HTML under each chart (ChartCard), so they wrap on any screen.
+    legend: { show: false },
     animationDuration: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 400,
   };
+}
+
+/** Plot area padding; extra room on the right keeps the last axis label inside the card. */
+export function gridOption(t: ChartTheme) {
+  return { left: 4, right: t.compact ? 28 : 24, top: 16, bottom: 8, containLabel: true };
 }
 
 export function axisStyle(t: ChartTheme) {

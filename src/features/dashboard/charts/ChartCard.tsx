@@ -4,6 +4,13 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { echarts } from './echarts';
 
+export interface LegendItem {
+  label: string;
+  color: string;
+  /** Dashed line (previous period, ideal) rather than a solid swatch. */
+  dashed?: boolean;
+}
+
 export interface TableData {
   columns: string[];
   rows: (string | number)[][];
@@ -20,15 +27,16 @@ interface ChartCardProps {
   onClick?: (params: { name?: string; seriesName?: string; dataIndex?: number }) => void;
   children?: ReactNode;
   empty?: string | null;
+  legend?: LegendItem[];
 }
 
 /** Card with title, one-line explanation, the chart, and a table view for screen readers (§10). */
-export function ChartCard({ title, question, table, option, height = 280, onClick, children, empty }: ChartCardProps) {
+export function ChartCard({ title, question, table, option, height = 280, onClick, children, empty, legend }: ChartCardProps) {
   const [asTable, setAsTable] = useState(false);
   const switchId = useId();
 
   return (
-    <figure className="glass flex flex-col gap-3 rounded-lg p-4 sm:p-5">
+    <figure className="glass flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <figcaption>
           <h3 className="font-semibold">{title}</h3>
@@ -71,7 +79,7 @@ export function ChartCard({ title, question, table, option, height = 280, onClic
         </div>
       ) : option ? (
         // Screen readers get a label here; the Table switch gives them the values (§10).
-        <div role="img" aria-label={`${title}. ${question} Switch on Table to read the values.`}>
+        <div className="min-w-0" role="img" aria-label={`${title}. ${question} Switch on Table to read the values.`}>
           <ReactEChartsCore
             echarts={echarts}
             option={option}
@@ -83,6 +91,21 @@ export function ChartCard({ title, question, table, option, height = 280, onClic
         </div>
       ) : (
         children
+      )}
+
+      {legend && legend.length > 1 && !asTable && !empty && (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legend">
+          {legend.map((l) => (
+            <li key={l.label} className="flex items-center gap-2 text-label">
+              <span
+                aria-hidden
+                className="inline-block w-5 shrink-0 rounded-sm"
+                style={l.dashed ? { borderTop: `2px dashed ${l.color}`, height: 0 } : { backgroundColor: l.color, height: 10 }}
+              />
+              {l.label}
+            </li>
+          ))}
+        </ul>
       )}
     </figure>
   );
