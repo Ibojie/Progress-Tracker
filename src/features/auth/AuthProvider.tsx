@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/queryClient';
+import { clearOfflineData } from '@/lib/offlineStorage';
 
 interface AuthContextValue {
   session: Session | null;
@@ -35,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase?.auth.signOut();
+    // Don't leave a copy of the user's data on a shared or lost device.
+    await clearOfflineData(queryClient);
   };
 
   return (
