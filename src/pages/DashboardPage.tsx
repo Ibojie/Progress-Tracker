@@ -9,6 +9,7 @@ import { FocusNow } from '@/features/dashboard/FocusNow';
 import { KpiTiles } from '@/features/dashboard/KpiTiles';
 import { PeriodSwitcher } from '@/features/dashboard/PeriodSwitcher';
 import { useDashboard } from '@/features/dashboard/useDashboard';
+import { InstallBanner } from '@/features/pwa/InstallPrompt';
 import { useToday } from '@/features/profile/useProfile';
 import { addDays, type DateRange, type PeriodKind } from '@/lib/engine';
 
@@ -46,6 +47,7 @@ export function DashboardPage() {
     <>
       <h1 className="sr-only">Dashboard</h1>
       <FocusNow data={data} />
+      <InstallBanner />
 
       {data.active.length === 0 ? (
         <section className="glass mb-6 rounded-lg p-6">

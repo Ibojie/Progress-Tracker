@@ -30,6 +30,7 @@ import { formatDate, toEngineElement, toEngineGoal, type ElementView, type GoalV
 import { MAX_GOALS, elementInputSchema, fieldErrors, type GoalInput } from '@/features/elements/schemas';
 import { STATUS_META, addDays, zeroProgressControl, type ZeroProgressStatus } from '@/lib/engine';
 import { cn } from '@/lib/utils';
+import { NEEDS_CONNECTION, useOnline } from '@/lib/useOnline';
 
 const ElementBurndown = lazy(() => import('@/features/dashboard/charts/ElementBurndown'));
 
@@ -77,6 +78,7 @@ function ElementDetail({ view }: { view: ElementView }) {
   const [deletingGoal, setDeletingGoal] = useState<GoalView | null>(null);
   const [resettingGoal, setResettingGoal] = useState<GoalView | null>(null);
 
+  const online = useOnline();
   const decommissioned = row.is_decommissioned;
   const control = zeroProgressControl(toEngineElement(row), row.goals.map(toEngineGoal), today);
   const canAdd = view.total < MAX_GOALS;
@@ -144,7 +146,8 @@ function ElementDetail({ view }: { view: ElementView }) {
             id="active-switch"
             checked={!decommissioned}
             onCheckedChange={(on) => toggleDecommission(!on)}
-            disabled={decommission.isPending}
+            disabled={decommission.isPending || !online}
+            title={online ? undefined : NEEDS_CONNECTION}
           />
           <Label htmlFor="active-switch">
             {decommissioned ? 'Switched off (decommissioned). Turn on to bring it back.' : 'Active'}
@@ -157,7 +160,7 @@ function ElementDetail({ view }: { view: ElementView }) {
           <h2 id="goals-heading" className="text-h2 font-semibold">
             Goals
           </h2>
-          <Button variant="outline" onClick={() => setAdding(true)} disabled={!canAdd}>
+          <Button variant="outline" onClick={() => setAdding(true)} disabled={!canAdd || !online} title={online ? undefined : NEEDS_CONNECTION}>
             <Plus aria-hidden /> {canAdd ? 'Add goal' : `${MAX_GOALS} goals maximum`}
           </Button>
         </div>
@@ -169,6 +172,7 @@ function ElementDetail({ view }: { view: ElementView }) {
               position={i}
               count={view.goals.length}
               disabled={busy}
+              online={online}
               onToggle={(isDone) => toggle.mutate({ goalId: g.row.id, isDone })}
               onEdit={() => setEditingGoal(g)}
               onDelete={() => setDeletingGoal(g)}
@@ -200,9 +204,16 @@ function ElementDetail({ view }: { view: ElementView }) {
       </Card>
 
       <div className="mb-8">
-        <Button variant="ghost" className="text-destructive" onClick={() => setConfirmDeleteElement(true)}>
+        <Button
+          variant="ghost"
+          className="text-destructive"
+          onClick={() => setConfirmDeleteElement(true)}
+          disabled={!online}
+          title={online ? undefined : NEEDS_CONNECTION}
+        >
           <Trash2 aria-hidden /> Delete this element
         </Button>
+        {!online && <p className="text-label text-muted-foreground">Adding, deleting, resetting dates and switching off need a connection.</p>}
       </div>
 
       {editingElement && (

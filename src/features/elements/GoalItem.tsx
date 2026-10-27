@@ -10,6 +10,8 @@ interface GoalItemProps {
   position: number;
   count: number;
   disabled: boolean;
+  /** Reset date and delete need a connection; ticks, edits and reordering work offline. */
+  online: boolean;
   onToggle: (isDone: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -18,7 +20,7 @@ interface GoalItemProps {
 }
 
 /** One row of the goal checklist (§6.3): tick, title, dates, band chip, state, actions. */
-export function GoalItem({ goal, position, count, disabled, onToggle, onEdit, onDelete, onMove, onReset }: GoalItemProps) {
+export function GoalItem({ goal, position, count, disabled, online, onToggle, onEdit, onDelete, onMove, onReset }: GoalItemProps) {
   const { row, info } = goal;
   const abandoned = info.state === 'abandoned';
   const checkboxId = `goal-${row.id}`;
@@ -61,7 +63,7 @@ export function GoalItem({ goal, position, count, disabled, onToggle, onEdit, on
 
       <div className="mt-3 flex flex-wrap items-center gap-1 pl-12">
         {abandoned && (
-          <Button size="default" variant="accent" onClick={onReset} className="mr-2">
+          <Button size="default" variant="accent" onClick={onReset} className="mr-2" disabled={!online} title={online ? undefined : 'Needs a connection'}>
             <CalendarClock aria-hidden /> Reset date
           </Button>
         )}
@@ -90,7 +92,7 @@ export function GoalItem({ goal, position, count, disabled, onToggle, onEdit, on
           variant="ghost"
           size="icon"
           onClick={onDelete}
-          disabled={disabled || count === 1}
+          disabled={disabled || count === 1 || !online}
           aria-label={count === 1 ? 'The only goal can’t be deleted' : `Delete “${row.title}”`}
           title={count === 1 ? 'An element needs at least one goal' : undefined}
         >

@@ -7,6 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ComingSoon, PageHeader } from '@/components/PagePlaceholder';
 import { cn } from '@/lib/utils';
 import { Archive } from '@/features/elements/Archive';
+import { useState } from 'react';
+import { useMutationState } from '@tanstack/react-query';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { isQueuedKey } from '@/features/elements/offlineQueue';
+import { InstallCard } from '@/features/pwa/InstallPrompt';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -16,6 +21,12 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }
 
 export function SettingsPage() {
   const { user, signOut } = useAuth();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  // Changes made offline that haven't reached the server yet; signing out would discard them.
+  const waiting = useMutationState({
+    filters: { status: 'pending', predicate: (m) => isQueuedKey(m.options.mutationKey) },
+    select: (m) => m.mutationId,
+  }).length;
   const { preference, setPreference } = useTheme();
 
   return (
@@ -65,12 +76,31 @@ export function SettingsPage() {
             <CardDescription>{user?.email}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" onClick={() => void signOut()}>
+            <Button variant="outline" onClick={() => (waiting > 0 ? setConfirmSignOut(true) : void signOut())}>
               <LogOut aria-hidden />
               Sign out
             </Button>
           </CardContent>
         </Card>
+
+        <InstallCard />
+
+        <ConfirmDialog
+          open={confirmSignOut}
+          onOpenChange={setConfirmSignOut}
+          title="Sign out with unsynced changes?"
+          confirmLabel="Sign out anyway"
+          destructive
+          onConfirm={() => {
+            setConfirmSignOut(false);
+            void signOut();
+          }}
+        >
+          <p>
+            {waiting} {waiting === 1 ? 'change' : 'changes'} made offline haven’t reached the server yet. Signing out removes your
+            data from this device, so they would be lost. Reconnect and wait for them to sync first.
+          </p>
+        </ConfirmDialog>
 
         <Card id="archive">
           <CardHeader>

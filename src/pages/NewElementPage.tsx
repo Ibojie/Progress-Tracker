@@ -17,6 +17,7 @@ import { MAX_GOALS, elementInputSchema, fieldErrors, goalInputSchema, newElement
 import { TEMPLATES, type ElementTemplate } from '@/features/elements/templates';
 import { addDays, completion, resolveElementStatus } from '@/lib/engine';
 import { cn } from '@/lib/utils';
+import { NEEDS_CONNECTION, useOnline } from '@/lib/useOnline';
 
 const STEPS = ['Category and name', 'Goals', 'Review'] as const;
 
@@ -26,6 +27,7 @@ export function NewElementPage() {
   const today = useToday();
   const categories = useCategories();
   const create = useCreateElement();
+  const online = useOnline();
 
   const blankGoal = (): GoalInput => ({ title: '', notes: '', start_date: today, due_date: addDays(today, 30) });
   const initialCategory = categories.data?.find((c) => c.key === params.get('category'))?.id ?? '';
@@ -277,10 +279,13 @@ export function NewElementPage() {
             Next <ArrowRight aria-hidden />
           </Button>
         ) : (
-          <Button variant="accent" onClick={save} disabled={create.isPending}>
-            <Check aria-hidden />
-            {create.isPending ? 'Saving…' : 'Save element'}
-          </Button>
+          <div className="grid gap-1 sm:justify-items-end">
+            <Button variant="accent" onClick={save} disabled={create.isPending || !online}>
+              <Check aria-hidden />
+              {create.isPending ? 'Saving…' : 'Save element'}
+            </Button>
+            {!online && <p className="text-label text-muted-foreground">{NEEDS_CONNECTION}</p>}
+          </div>
         )}
       </div>
     </>

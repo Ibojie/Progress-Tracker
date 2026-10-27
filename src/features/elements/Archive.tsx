@@ -3,11 +3,13 @@ import { Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useElementViews, useSetDecommissioned } from './api';
 import { StatusPill } from './StatusPill';
+import { NEEDS_CONNECTION, useOnline } from '@/lib/useOnline';
 
 /** Settings → Archive: decommissioned elements (switch back on) and completed ones (§4.5, §6.6). */
 export function Archive() {
   const { views, isLoading } = useElementViews();
   const decommission = useSetDecommissioned();
+  const online = useOnline();
   const off = views.filter((v) => v.status === 'decommissioned');
   const completed = views.filter((v) => v.status === 'completed');
 
@@ -33,7 +35,8 @@ export function Archive() {
                 </div>
                 <Button
                   variant="outline"
-                  disabled={decommission.isPending}
+                  disabled={decommission.isPending || !online}
+                  title={online ? undefined : NEEDS_CONNECTION}
                   onClick={() => decommission.mutate(v.row.id, false)}
                   aria-label={`Switch “${v.row.name}” back on`}
                 >
