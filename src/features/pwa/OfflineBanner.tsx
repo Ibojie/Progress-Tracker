@@ -11,24 +11,27 @@ export function OfflineBanner() {
     select: (m) => m.mutationId,
   }).length;
 
-  if (online && waiting === 0) return null;
+  const show = !online || waiting > 0;
   const changes = `${waiting} ${waiting === 1 ? 'change' : 'changes'}`;
+  // The live region is always present (only its text changes) so screen readers announce it.
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={
-        online
-          ? 'flex items-center justify-center gap-2 bg-primary px-4 py-1.5 text-label font-semibold text-primary-foreground'
-          : 'flex items-center justify-center gap-2 bg-foreground px-4 py-1.5 text-label font-semibold text-background'
-      }
-    >
-      {online ? <RefreshCw aria-hidden className="size-4 animate-spin" /> : <CloudOff aria-hidden className="size-4" />}
-      {online
-        ? `Syncing ${changes}…`
-        : waiting > 0
-          ? `Offline · ${changes} will sync when you’re back online`
-          : 'Offline · showing your saved data; changes will sync'}
+    <div role="status" aria-live="polite">
+      {show && (
+        <div
+          className={
+            online
+              ? 'flex items-center justify-center gap-2 bg-primary px-4 py-1.5 text-label font-semibold text-primary-foreground'
+              : 'flex items-center justify-center gap-2 bg-foreground px-4 py-1.5 text-label font-semibold text-background'
+          }
+        >
+          {online ? <RefreshCw aria-hidden className="size-4 animate-spin" /> : <CloudOff aria-hidden className="size-4" />}
+          {online
+            ? `Syncing ${changes}…`
+            : waiting > 0
+              ? `Offline · ${changes} will sync when you’re back online`
+              : 'Offline · showing your saved data; changes will sync'}
+        </div>
+      )}
     </div>
   );
 }

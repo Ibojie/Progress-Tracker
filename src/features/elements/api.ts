@@ -181,7 +181,10 @@ function useQueuedMutation<TVars>(
       return { previous };
     },
     onError: (error, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(key, context.previous);
+      // With other changes still queued, restoring this snapshot would hide them too: reload instead.
+      const othersWaiting = queryClient.isMutating({ predicate: (m) => isQueuedKey(m.options.mutationKey) }) > 1;
+      if (context?.previous && !othersWaiting) queryClient.setQueryData(key, context.previous);
+      else void queryClient.invalidateQueries({ queryKey: ['elements'] });
       notify(`${failure} ${error.message}`);
     },
   });

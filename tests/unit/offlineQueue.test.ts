@@ -7,7 +7,10 @@ import {
   applyGoalEdit,
   applySwap,
   applyToggle,
+  isNetworkError,
   isQueuedKey,
+  queueRetry,
+  queueRetryDelay,
   registerQueuedMutations,
 } from '@/features/elements/offlineQueue';
 import type { ElementWithGoals } from '@/features/elements/model';
@@ -147,5 +150,74 @@ describe('the offline queue', () => {
     expect(maxRunning).toBe(1); // one at a time
     // Nothing is left to send twice.
     expect(after.getMutationCache().getAll().filter((m) => m.state.status === 'pending')).toHaveLength(0);
+  });
+
+  it('reopening the app while still offline sends nothing (review finding: TanStack starts "online")', async () => {
+    const sent: string[] = [];
+    const make = () => {
+      const qc = new QueryClient();
+      qc.setMutationDefaults(QUEUED.toggleGoal, { scope: QUEUE_SCOPE, mutationFn: async (v: { goalId: string }) => void sent.push(v.goalId) });
+      return qc;
+    };
+    onlineManager.setOnline(false);
+    const before = make();
+    void new MutationObserver<void, Error, { goalId: string; isDone: boolean }>(before, { mutationKey: QUEUED.toggleGoal })
+      .mutate({ goalId: 'g1', isDone: true })
+      .catch(() => {});
+    await new Promise((r) => setTimeout(r, 10));
+    const saved = JSON.parse(JSON.stringify(dehydrate(before)));
+
+    // Reopened offline: main.tsx sets the real state first, then the saved queue resumes.
+    onlineManager.setOnline(false); // what main.tsx does when navigator.onLine is false
+    const after = make();
+    hydrate(after, saved);
+    void after.resumePausedMutations();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent).toEqual([]);
+    expect(after.getMutationCache().getAll()[0]!.state.isPaused).toBe(true);
+
+    onlineManager.setOnline(true);
+    await after.resumePausedMutations();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sent).toEqual(['g1']);
+  });
+
+  it('a dropped connection is retried until it works; a real rejection is not retried', async () => {
+    let calls = 0;
+    const qc = new QueryClient();
+    qc.setMutationDefaults(QUEUED.toggleGoal, {
+      scope: QUEUE_SCOPE,
+      retry: queueRetry,
+      retryDelay: 1,
+      mutationFn: async () => {
+        calls++;
+        if (calls < 3) throw new Error('TypeError: Failed to fetch');
+      },
+    });
+    await new MutationObserver<void, Error, object>(qc, { mutationKey: QUEUED.toggleGoal }).mutate({});
+    expect(calls).toBe(3);
+
+    let rejected = 0;
+    qc.setMutationDefaults(QUEUED.updateGoal, {
+      retry: queueRetry,
+      retryDelay: 1,
+      mutationFn: async () => {
+        rejected++;
+        throw new Error('new row violates row-level security policy');
+      },
+    });
+    await expect(new MutationObserver<void, Error, object>(qc, { mutationKey: QUEUED.updateGoal }).mutate({})).rejects.toThrow();
+    expect(rejected).toBe(1);
+  });
+
+  it('recognises network failures and backs off up to 30 seconds', () => {
+    expect(isNetworkError(new Error('TypeError: Failed to fetch'))).toBe(true);
+    expect(isNetworkError(new Error('Load failed'))).toBe(true);
+    expect(isNetworkError(new Error('NetworkError when attempting to fetch resource.'))).toBe(true);
+    expect(isNetworkError('fetch failed')).toBe(true);
+    expect(isNetworkError(new Error('duplicate key value'))).toBe(false);
+    expect(queueRetry(3, new Error('Failed to fetch'))).toBe(true);
+    expect(queueRetry(50, new Error('Failed to fetch'))).toBe(false);
+    expect([0, 1, 4, 10].map(queueRetryDelay)).toEqual([1000, 2000, 16000, 30000]);
   });
 });

@@ -55,14 +55,14 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="glass sticky top-0 z-30 flex items-center justify-between rounded-none border-x-0 border-t-0 px-4 py-1 pt-[max(0.25rem,env(safe-area-inset-top))]">
+        <div className="sticky top-0 z-30">
+        <header className="glass flex items-center justify-between rounded-none border-x-0 border-t-0 px-4 py-1 pt-[max(0.25rem,env(safe-area-inset-top))]">
           <span className="lg:invisible">
             <Brand />
           </span>
           <ThemeToggle />
         </header>
-        <div className="sticky top-[52px] z-20">
-          <OfflineBanner />
+        <OfflineBanner />
         </div>
 
         <main id="main" className="page-shell flex-1 py-6 pb-28 lg:pb-10">

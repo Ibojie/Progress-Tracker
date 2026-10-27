@@ -3,6 +3,7 @@
 // even after the app was closed. Each queued action has a fixed key and a default mutation
 // function registered on the QueryClient, which is what lets a reopened app finish it.
 import type { MutationKey, QueryClient } from '@tanstack/react-query';
+import { notifyGlobally } from '@/components/Notice';
 import { supabase } from '@/lib/supabase';
 import type { GoalRow } from '@/lib/database.types';
 import type { ElementWithGoals } from './model';
@@ -50,20 +51,40 @@ function check<T extends { error: { message: string } | null }>(result: T): T {
   return result;
 }
 
+/** An update that matched no row: deleted elsewhere, or the session ended. Don't call that "synced". */
+function checkUpdated<T extends { error: { message: string } | null; data: unknown[] | null }>(result: T): T {
+  check(result);
+  if (!result.data || result.data.length === 0) {
+    throw new Error('It no longer exists, or you were signed out. Reload to see the latest.');
+  }
+  return result;
+}
+
+/** A failed request that never reached the server (dropped connection, captive portal, DNS). */
+export function isNetworkError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(message);
+}
+
+/** Keep retrying network failures (with back-off, paused while offline); give up at once on real errors. */
+export const queueRetry = (failures: number, error: unknown) => isNetworkError(error) && failures < 50;
+export const queueRetryDelay = (failures: number) => Math.min(1000 * 2 ** failures, 30_000);
+
 export const queuedFns = {
   toggleGoal: async ({ goalId, isDone }: ToggleGoalVars) => {
-    check(await db().from('goals').update({ is_done: isDone }).eq('id', goalId));
+    checkUpdated(await db().from('goals').update({ is_done: isDone }).eq('id', goalId).select('id'));
   },
   updateGoal: async ({ goalId, goal }: UpdateGoalVars) => {
-    check(
+    checkUpdated(
       await db()
         .from('goals')
         .update({ title: goal.title, notes: goal.notes || null, start_date: goal.start_date, due_date: goal.due_date })
-        .eq('id', goalId),
+        .eq('id', goalId)
+        .select('id'),
     );
   },
   updateElement: async ({ id, patch }: UpdateElementVars) => {
-    check(await db().from('elements').update(patch).eq('id', id));
+    checkUpdated(await db().from('elements').update(patch).eq('id', id).select('id'));
   },
   swapGoals: async ({ a, b }: SwapGoalsVars) => {
     check(await db().rpc('swap_goal_order', { p_goal_a: a, p_goal_b: b }));
@@ -80,6 +101,10 @@ export function registerQueuedMutations(queryClient: QueryClient): void {
     queryClient.setMutationDefaults(QUEUED[name], {
       mutationFn: queuedFns[name] as (vars: unknown) => Promise<void>,
       scope: QUEUE_SCOPE,
+      retry: queueRetry,
+      retryDelay: queueRetryDelay,
+      // Used by changes restored after a reload (the screen's own handler covers the rest).
+      onError: (error: Error) => notifyGlobally(`A change made offline couldn’t be saved. ${error.message}`),
       onSettled: settled,
     });
   }
