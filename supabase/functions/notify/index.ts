@@ -141,6 +141,17 @@ async function runTest(db: SupabaseClient, req: Request): Promise<Response> {
   if (error || !data.user) return json(401, { error: 'Sign in again, then retry.' });
   const vapid = vapidKeys();
   if (!vapid) return json(500, { error: 'Push isn’t set up on the server yet.' });
+  // The test also appears in the bell, like a real alert: one unread entry, refreshed each time.
+  await db.from('notification_log').delete().eq('user_id', data.user.id).eq('kind', 'test');
+  await db.from('notification_log').insert({
+    user_id: data.user.id,
+    kind: 'test',
+    channel: 'in_app',
+    title: 'Test notification',
+    body: 'Push notifications are working on this device.',
+    link: '/settings',
+    delivered_at: new Date().toISOString(),
+  });
   const result = await pushToUser(db, vapid, data.user.id, {
     title: 'Test notification',
     body: 'Push notifications are working on this device.',
