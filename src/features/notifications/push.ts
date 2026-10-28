@@ -54,6 +54,23 @@ export function deviceLabel(ua: string = navigator.userAgent): string {
   return `${os} · ${browser}`;
 }
 
+const PUSH_SERVICE_HINT =
+  'Wait a moment and try again. If it keeps failing, check this browser can reach its push service (in Brave: Settings → Privacy → turn on “Use Google services for push messaging”).';
+
+/**
+ * Desktop Chrome sometimes fails the first subscribe ("Error retrieving push subscription")
+ * while its connection to the push service starts up; a short wait and a second try usually works.
+ */
+async function subscribeWithRetry(reg: ServiceWorkerRegistration): Promise<PushSubscription> {
+  const options = { userVisibleOnly: true, applicationServerKey: base64UrlToBytes(VAPID_PUBLIC_KEY) };
+  try {
+    return await reg.pushManager.subscribe(options);
+  } catch {
+    await new Promise((r) => setTimeout(r, 2000));
+    return reg.pushManager.subscribe(options);
+  }
+}
+
 /**
  * Asks permission (must run from a tap), subscribes this device and saves it. Returns an
  * error message for the user, or null on success.
@@ -70,9 +87,12 @@ export async function enablePush(): Promise<string | null> {
   }
   const reg = await registration();
   if (!reg) return 'Notifications aren’t available here. Install the app, or use Chrome, Edge, Firefox or Safari.';
-  const sub =
-    (await reg.pushManager.getSubscription()) ??
-    (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(VAPID_PUBLIC_KEY) }));
+  let sub: PushSubscription;
+  try {
+    sub = (await reg.pushManager.getSubscription()) ?? (await subscribeWithRetry(reg));
+  } catch (e) {
+    return `${(e as Error).message || 'The browser couldn’t reach its push service.'} ${PUSH_SERVICE_HINT}`;
+  }
   const json = sub.toJSON();
   // Saved through a server function: it checks the push service and, if someone else used this
   // device before, moves the device to the current user.
