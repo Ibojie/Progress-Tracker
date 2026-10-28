@@ -2,6 +2,17 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] - 2026-10-28 - Owner feedback on the dashboard cards
+
+### Added
+- **View more / View less** on **Your weekly insight** and **Progress and advice**.
+  - Long content starts collapsed with a soft fade.
+  - The choice is remembered on each device.
+  - Tabbing into the hidden part opens it.
+
+### Fixed
+- Switching the AI insight on or off updates the dashboard straight away. A failed "is AI set up?" check is retried instead of hiding the card until the next refresh.
+
 ## [0.6.0] - 2026-10-29 - Phase 6: AI weekly insight and data export
 
 ### Added
