@@ -66,7 +66,10 @@ export function useMarkRead() {
 }
 
 type ProfilePatch = Partial<
-  Pick<ProfileRow, 'push_enabled' | 'email_digest_enabled' | 'in_app_enabled' | 'quiet_hours_start' | 'quiet_hours_end' | 'timezone'>
+  Pick<
+    ProfileRow,
+    'push_enabled' | 'email_digest_enabled' | 'in_app_enabled' | 'quiet_hours_start' | 'quiet_hours_end' | 'timezone' | 'ai_summary_enabled'
+  >
 >;
 
 export function useUpdateProfile() {

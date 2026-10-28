@@ -2,6 +2,29 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-10-29 - Phase 6: AI weekly insight and data export
+
+### Added
+- **Your weekly insight** on the dashboard: a short coaching note from Claude with 3 things to do this week, 1 risk to watch and 1 thing to celebrate, under 180 words.
+  - **Refresh insight** gets a new one, up to 5 times a day.
+  - A new one is written every Monday before the digest, and the Monday email includes it as **Your coach's take**.
+- **Privacy:** Claude receives only area and element names, percentages, statuses, urgency, days left, pace and weekly counts. Never goal titles, notes or your email.
+- **Settings → AI weekly insight:** an on/off switch that explains what is shared.
+- **Settings → Export your data:** everything as JSON, or your goals as CSV for Excel or Google Sheets.
+
+### Fixed (from the Phase 6 code review)
+- **The card waits for the server** to confirm the AI is set up, so it never shows without a key.
+- **The 5-a-day limit holds** even with rapid repeat taps. Failed attempts count too.
+- **Monday insights can't slow down the reminders:**
+  - short timeout;
+  - at most 3 tries;
+  - the digest waits up to two hours for its insight.
+- **Matches the dashboard's advice:** pace is judged the same way as the rule-based advice, including elements with nothing ticked yet.
+- **Better output and export:**
+  - replies that ignore the format, or run long, are discarded;
+  - the export includes the daily history, and reads every page whatever the server's limit;
+  - the insight's date uses your timezone.
+
 ## [0.5.1] - 2026-10-28 - Push fixes from the owner's device tests
 
 ### Fixed

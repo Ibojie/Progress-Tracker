@@ -13,6 +13,8 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { isQueuedKey } from '@/features/elements/offlineQueue';
 import { InstallCard } from '@/features/pwa/InstallPrompt';
 import { NotificationSettings } from '@/features/notifications/NotificationSettings';
+import { AiSettings } from '@/features/insight/AiSettings';
+import { ExportCard } from '@/features/export/ExportCard';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -73,6 +75,8 @@ export function SettingsPage() {
 
         <NotificationSettings />
 
+        <AiSettings />
+
         <Card>
           <CardHeader>
             <CardTitle>Account</CardTitle>
@@ -115,7 +119,9 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        <ComingSoon phase={6}>The AI summary switch and data export.</ComingSoon>
+        <ExportCard />
+
+        <ComingSoon phase={7}>Deleting your account and all its data.</ComingSoon>
       </div>
     </>
   );

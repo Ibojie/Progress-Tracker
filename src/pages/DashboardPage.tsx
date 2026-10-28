@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Sparkles } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { AdviceCard } from '@/features/dashboard/AdviceCard';
+import { InsightCard } from '@/features/insight/InsightCard';
 import { BandLegend } from '@/features/dashboard/BandLegend';
 import { CategoryCards } from '@/features/dashboard/CategoryCards';
 import { FocusNow } from '@/features/dashboard/FocusNow';
@@ -66,6 +67,7 @@ export function DashboardPage() {
         <>
           <PeriodSwitcher kind={kind} custom={custom} onKind={chooseKind} onCustom={setCustom} />
           <KpiTiles kpis={data.kpis} previousLabel={`same point ${data.label.previous}`} />
+          <InsightCard />
           <AdviceCard advice={data.advice} />
         </>
       )}

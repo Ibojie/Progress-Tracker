@@ -22,6 +22,7 @@ export type Database = {
           model: string
           period_end: string
           period_start: string
+          trigger: string
           user_id: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           model: string
           period_end: string
           period_start: string
+          trigger?: string
           user_id: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           model?: string
           period_end?: string
           period_start?: string
+          trigger?: string
           user_id?: string
         }
         Relationships: []
@@ -471,6 +474,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_manual_left: { Args: { p_now?: string; p_user: string }; Returns: number }
+      ai_summary_input: { Args: { p_today: string; p_user: string }; Returns: Json }
+      ai_weekly_due: {
+        Args: { p_now?: string }
+        Returns: { today: string; user_id: string }[]
+      }
+      ai_weekly_for: { Args: { p_today: string; p_user: string }; Returns: string }
       assert_element_has_goals: { Args: { target: string }; Returns: undefined }
       claim_deliveries: {
         Args: { p_limit?: number }

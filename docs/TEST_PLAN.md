@@ -34,3 +34,15 @@ Tests are layered: many fast unit tests, some database tests, and (from Phase 7)
 - **Security:** users read only their own alerts and may change only `read_at`; only the service role can queue, claim, read digests or check the scheduler secret.
 - **Messages (`tests/unit/notifyMessages.test.ts`):** push payloads, links limited to in-app paths, HTML escaping in emails, digest wording, the VAPID key format.
 - **Owner's device tests (acceptance test 11 and §9):** turn on push, Send test push, tap it to open the app; receive the 07:00 alerts and the Monday digest email.
+
+## AI insight and export cases (Phase 6)
+- **What the AI sees (`tests/db/aiSummaries.test.ts`):** names and numbers only, with no goal titles, notes, email or ids; each element's %, status, days left, band and pace, most urgent first; switched-off elements left out; the week against the week before.
+- **Limits and schedule:** 5 manual refreshes a day in the user's timezone; a Monday insight once per user, after their send hour, only with the switch on and something tracked; the digest picks up its Monday's insight.
+- **Security:** users read only their own insights and can't write them; only the server can build the input or check limits and schedule.
+- **Format (`tests/unit/insight.test.ts`):** the reply is parsed into headings, actions and sentences; markup, links and tags are stripped; email HTML is escaped; the digest includes the coach's take only when one exists.
+- **Export:** CSV quoting and formula protection, row order by area and element, and the UTF-8 marker.
+- **Owner's tests (acceptance test 14 and §7.2):**
+  - Refresh insight writes a note.
+  - The count of refreshes left drops.
+  - Switching AI off hides the card.
+  - Both exports open correctly.
