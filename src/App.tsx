@@ -24,6 +24,9 @@ const TimelinePage = named(() => import('@/pages/TimelinePage'), 'TimelinePage')
 const NewElementPage = named(() => import('@/pages/NewElementPage'), 'NewElementPage');
 const SettingsPage = named(() => import('@/pages/SettingsPage'), 'SettingsPage');
 const NotFoundPage = named(() => import('@/pages/NotFoundPage'), 'NotFoundPage');
+const LegalPage = named(() => import('@/pages/LegalRoutes'), 'LegalRoute');
+// Public legal pages (Google Play links to these): no sign-in needed.
+const LEGAL_SLUGS = ['privacy', 'terms', 'fair-use', 'refunds', 'account-deletion'] as const;
 
 // Signed in: start fetching the dashboard while the session is checked, not after.
 if (typeof window !== 'undefined') void loadDashboard().catch(() => {});
@@ -43,6 +46,17 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          {LEGAL_SLUGS.map((slug) => (
+            <Route
+              key={slug}
+              path={`/${slug}`}
+              element={
+                <Suspense fallback={null}>
+                  <LegalPage />
+                </Suspense>
+              }
+            />
+          ))}
           {ChartsPreview && (
             <Route
               path="/__dev/charts"

@@ -347,7 +347,22 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 6. **Still to check on the live database:** a deletion on hosted Supabase. The owner deletes a spare test account. Other signed-in devices keep a valid token for up to an hour, but their writes are then rejected.
 7. **Prettier settings** (`.prettierrc`: single quotes, 140 columns) match the project's existing style. Two files that had been formatted with double quotes were restored.
 
+## Legal documents (after Phase 7)
+- **Drafts, not legal advice.** They are written in plain language to match what the app actually does. The owner should have a lawyer review them, especially for the NDPA 2023 and before any paid feature.
+- **Owner's choices:**
+  - operator: **The Business Apostle**, Lagos, Nigeria;
+  - contact: ibojie@gmail.com;
+  - the app is free for now;
+  - governing law: Nigeria, with Lagos courts.
+- **Hosting:** the documents are hosted as **public pages in the app** (`/privacy`, `/terms`, `/fair-use`, `/refunds`, `/account-deletion`). Google Play needs public, non-PDF URLs, and the deletion page has to work without the app.
+- **Facts behind the Privacy Policy:**
+  - Data is stored with Supabase in **Ireland (EU)**.
+  - Providers: Vercel (hosting), Google (sign-in and push), Apple, Microsoft and Mozilla (push only, end-to-end encrypted), Resend (email) and Anthropic (the AI insight, names and numbers only).
+  - No ads, no analytics and no selling of data.
+- **Retention after deletion:** stated as up to 30 days for backups, email logs, AI request records and server logs. That is a safe upper bound across the providers.
+- **Content lives in one file** (`src/features/legal/documents.ts`), so a lawyer's changes are a single edit.
+
 ## Open questions for the owner
 - **Google sign-in, left to do:** delete the old (hidden) client secret in Google Cloud, and publish the consent screen once the legal documents exist.
 - **VAPID subject:** switch to a support address (for example `mailto:support@thebusinessapostle.net`) when one exists.
-- **After all phases (owner request):** a Privacy Policy, Terms of Service, Fair Use and Refund policies, plus in-app account deletion, as Google Play requires.
+- **Legal review:** have a lawyer review the drafts in `src/features/legal/documents.ts`.

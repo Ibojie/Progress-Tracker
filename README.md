@@ -108,6 +108,10 @@ The GitHub repo is connected to Vercel. Every pull request gets a preview URL an
 
 Once installed, the app opens offline with your saved data. Ticks and edits made offline sync when you're back online.
 
+## Legal pages
+
+These public pages need no sign-in: `/privacy`, `/terms`, `/fair-use`, `/refunds` and `/account-deletion`. Their text is in `src/features/legal/documents.ts`. Use these URLs for Google Play's privacy policy field, the Data safety deletion link, and the Google sign-in consent screen.
+
 ## End-to-end tests
 
 `npm run e2e` builds the app and drives it in Chromium at desktop and phone sizes.

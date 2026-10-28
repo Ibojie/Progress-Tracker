@@ -2,6 +2,17 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] - 2026-10-28 - Legal documents for Google Play
+
+### Added
+- **Public legal pages:** no sign-in is needed, and they are linked from the sign-in screen and **Settings → Legal and privacy**.
+  - `/privacy`: Privacy Policy.
+  - `/terms`: Terms of Service.
+  - `/fair-use`: Fair Use Policy.
+  - `/refunds`: Refund Policy.
+  - `/account-deletion`: how to delete your account in the app or by email, what is deleted, and what is kept for how long.
+- **Sign-in screen:** it now says that continuing means agreeing to the Terms and Privacy Policy.
+
 ## [0.7.0] - 2026-10-30 - Phase 7: polish and launch-readiness
 
 ### Added
