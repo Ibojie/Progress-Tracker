@@ -4,7 +4,7 @@ import { useTheme } from '@/lib/theme/ThemeProvider';
 import type { ThemePreference } from '@/lib/theme/theme';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ComingSoon, PageHeader } from '@/components/PagePlaceholder';
+import { PageHeader } from '@/components/PagePlaceholder';
 import { cn } from '@/lib/utils';
 import { Archive } from '@/features/elements/Archive';
 import { useState } from 'react';
@@ -15,6 +15,7 @@ import { InstallCard } from '@/features/pwa/InstallPrompt';
 import { NotificationSettings } from '@/features/notifications/NotificationSettings';
 import { AiSettings } from '@/features/insight/AiSettings';
 import { ExportCard } from '@/features/export/ExportCard';
+import { DeleteAccountCard } from '@/features/account/DeleteAccountCard';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -121,7 +122,7 @@ export function SettingsPage() {
 
         <ExportCard />
 
-        <ComingSoon phase={7}>Deleting your account and all its data.</ComingSoon>
+        <DeleteAccountCard />
       </div>
     </>
   );

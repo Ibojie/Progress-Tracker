@@ -39,7 +39,7 @@ export function GoalItem({ goal, position, count, disabled, online, onToggle, on
             checked={row.is_done}
             disabled={disabled}
             onChange={(e) => onToggle(e.target.checked)}
-            className="size-6 cursor-pointer accent-[rgb(var(--done))]"
+            className="tick-box size-6 cursor-pointer accent-[rgb(var(--done))]"
             aria-describedby={`${checkboxId}-meta`}
           />
           <span className="sr-only">Mark “{row.title}” as {row.is_done ? 'not done' : 'done'}</span>

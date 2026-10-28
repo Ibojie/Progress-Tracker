@@ -6,6 +6,7 @@ import type { Json } from '@/lib/database.types';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useTodayState } from '@/features/profile/useProfile';
 import { useNotice } from '@/components/Notice';
+import { celebrate } from '@/lib/celebrate';
 import { buildElementView, type ElementView, type ElementWithGoals } from './model';
 import type { GoalInput } from './schemas';
 import {
@@ -192,8 +193,24 @@ function useQueuedMutation<TVars>(
 
 /** Tick or untick a goal (§6.3). Works offline, and remembers when the box was tapped. */
 export function useToggleGoal() {
+  const queryClient = useQueryClient();
+  const key = useElementsKey();
   const m = useQueuedMutation<ToggleGoalVars>(QUEUED.toggleGoal, (rows, v) => applyToggle(rows, v, new Date().toISOString()), 'Couldn’t save the tick.');
-  return { ...m, mutate: (vars: Omit<ToggleGoalVars, 'tickedAt'>) => m.mutate({ ...vars, tickedAt: new Date().toISOString() }) };
+  return {
+    ...m,
+    mutate: (vars: Omit<ToggleGoalVars, 'tickedAt'>) => {
+      // Confetti when this tick finishes the element (§10): every other goal is already done.
+      if (vars.isDone && completesElement(queryClient.getQueryData<ElementWithGoals[]>(key), vars.goalId)) celebrate();
+      m.mutate({ ...vars, tickedAt: new Date().toISOString() });
+    },
+  };
+}
+
+/** True when ticking this goal would make its element 100% done. */
+export function completesElement(rows: ElementWithGoals[] | undefined, goalId: string): boolean {
+  const element = rows?.find((e) => e.goals.some((g) => g.id === goalId));
+  if (!element) return false;
+  return element.goals.every((g) => g.id === goalId || g.is_done);
 }
 
 /** Edit an element's name, description or 0% status. Works offline. */

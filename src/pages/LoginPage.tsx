@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 import { Mail, Target } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +17,8 @@ function redirectUrl(): string {
 
 export function LoginPage() {
   const { session } = useAuth();
+  // A message passed along from another screen, e.g. after deleting an account.
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -68,6 +70,12 @@ export function LoginPage() {
             <p className="text-secondary text-muted-foreground">Never miss a deadline again.</p>
           </div>
         </div>
+
+        {notice && (
+          <p role="status" className="mb-4 rounded-md border border-border/70 bg-surface/70 px-4 py-3">
+            {notice}
+          </p>
+        )}
 
         {sentTo ? (
           <div role="status" className="space-y-3">

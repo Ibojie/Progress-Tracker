@@ -42,7 +42,7 @@ export function FocusNow({ data }: { data: DashboardData }) {
                     type="checkbox"
                     checked={false}
                     onChange={() => toggle.mutate({ goalId: item.goalId, isDone: true })}
-                    className="size-6 cursor-pointer accent-[rgb(var(--done))]"
+                    className="tick-box size-6 cursor-pointer accent-[rgb(var(--done))]"
                   />
                   <span className="sr-only">
                     Mark “{item.goalTitle}” in {item.elementName} as done
