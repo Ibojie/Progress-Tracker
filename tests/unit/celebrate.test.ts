@@ -17,10 +17,14 @@ describe('confetti when an element reaches 100%', () => {
     expect(completesElement(undefined, 'g0')).toBe(false);
   });
 
-  it('draws nothing when the device asks for reduced motion', () => {
+  it('still celebrates when the device asks for reduced motion (the calm version)', () => {
     vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ scale() {} } as unknown as CanvasRenderingContext2D);
+    vi.stubGlobal('requestAnimationFrame', () => 0);
     const append = vi.spyOn(document.body, 'appendChild');
     celebrate();
-    expect(append).not.toHaveBeenCalled();
+    expect(append).toHaveBeenCalledTimes(1);
+    (append.mock.calls[0]![0] as HTMLElement).remove();
+    vi.unstubAllGlobals();
   });
 });

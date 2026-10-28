@@ -55,7 +55,11 @@ test('acceptance test 1: ticking goals moves PMI 2027 through In Progress to Com
   await tick(1);
   await expect(page.getByText(/In Progress\s*·\s*25%/).first()).toBeVisible();
 
-  for (const n of [2, 3, 4]) await tick(n);
+  for (const n of [2, 3]) await tick(n);
+  await tick(4);
+  // The last goal sets off the confetti (a canvas that removes itself after a moment).
+  await expect(page.locator('canvas[aria-hidden="true"]')).toHaveCount(1);
+  await expect(page.locator('canvas[aria-hidden="true"]')).toHaveCount(0, { timeout: 5000 });
   await expect(page.getByText(/Completed\s*·\s*100%/).first()).toBeVisible();
 
   await page.getByLabel('Mark “Goal 4” as not done').click();
@@ -102,6 +106,8 @@ test('the app is usable by keyboard: skip link, then the main navigation', async
   test.skip(isMobile, 'keyboard check runs on desktop');
   await signIn(page);
   await page.goto('/');
+  // Screens load on demand: wait for this one before pressing keys.
+  await expect(page.getByRole('heading', { name: 'Progress and advice' }).or(page.getByText('Start tracking'))).toBeVisible();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   await page.keyboard.press('Enter');
