@@ -25,6 +25,7 @@ const row = (patch: Partial<AlertRow> = {}): AlertRow => ({
   element_id: 'abc-123',
   kind: 'due_today',
   channel: 'push',
+  attempts: 1,
   title: 'Due today: Mock exam',
   body: 'PMI 2027 · tick it off once it’s done.',
   link: '/elements/abc-123',

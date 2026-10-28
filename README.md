@@ -4,7 +4,7 @@ A personal Progressive Web App for tracking goals and deadlines in four areas of
 
 The full specification is in [`docs/PROGRESS_TRACKER_BUILD_PROMPT.md`](docs/PROGRESS_TRACKER_BUILD_PROMPT.md). Assumptions are logged in [`DECISIONS.md`](DECISIONS.md) and releases in [`CHANGELOG.md`](CHANGELOG.md).
 
-**Status:** Phase 5 (notifications) released as v0.5.0. Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
+**Status:** Phase 6 (AI weekly insight and data export) released as v0.6.0. Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
 
 ## Stack
 
@@ -38,7 +38,7 @@ Without the two Supabase values the app still starts and shows a setup screen.
 | `VITE_VAPID_PUBLIC_KEY` | optional | Push public key, safe to share. Built into `src/features/notifications/push.ts`; set this only to override it |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Function secrets only | Never in the client or the repo |
 | `RESEND_API_KEY` | Supabase secrets | Resend key with sending access to `notify.thebusinessapostle.net` |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Supabase secrets | Phase 6 |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Supabase secrets | The AI weekly insight. The model defaults to `claude-sonnet-5-5`. Without the key the insight card simply doesn't appear |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Supabase secrets | Push key pair; the subject is the operator contact (`mailto:`) |
 | `APP_URL`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Supabase secrets, optional | Defaults: the production URL, `reminders@notify.thebusinessapostle.net`, the owner's inbox |
 
@@ -77,8 +77,23 @@ Under **Authentication → URL Configuration**:
 Deploy the function after `db push`:
 
 ```bash
-npx supabase functions deploy notify
+npx.cmd supabase functions deploy notify --use-api
 ```
+
+## AI weekly insight
+
+- **What it is:** a short coaching note (3 actions, 1 risk, 1 win; at most 180 words) on the dashboard and in the Monday email.
+- **What Claude receives:** `ai_summary_input`, a compact summary of area and element names, percentages, statuses, bands, days left, pace and weekly counts. Goal titles, notes, email addresses and ids are never sent.
+- **When it's written:**
+  - Every Monday, by the hourly `notify` job, before the digest goes out.
+  - On demand with **Refresh insight** (the `ai-summary` function), up to 5 times a day.
+- **No key?** Without `ANTHROPIC_API_KEY`, or if a call fails, the card hides and the rule-based advice carries on.
+
+```bash
+npx.cmd supabase functions deploy ai-summary --use-api
+```
+
+**Settings → Export** downloads everything as JSON, or your goals as CSV. It's read through the signed-in user's own access rules.
 
 ## Deploy
 

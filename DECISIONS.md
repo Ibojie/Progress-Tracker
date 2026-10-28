@@ -281,6 +281,39 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 - **Updates apply themselves when safe:** a waiting new version kept old code running on the owner's devices three times. It now switches automatically right after the app opens or when it goes to the background, as long as no offline changes are waiting. Otherwise **Update now** is offered as before.
 - **Owner's result:** push works on Android (installed app) and on Windows Chrome.
 
+## Phase 6: AI weekly insight and data export
+- **Model:** `ANTHROPIC_MODEL`, default **Claude Sonnet 5.5** (`claude-sonnet-5-5`), as the spec sets.
+  - It runs at `effort: low`: a 180-word note doesn't need deep reasoning, and that keeps cost and waiting time down.
+  - **Refusal fallbacks are on** (`fallbacks: "default"`): if a safety classifier declines, Anthropic re-runs the request on its recommended fallback model. If it is still declined, the card simply isn't updated.
+- **Official SDK** (`npm:@anthropic-ai/sdk`), called only from Edge Functions. The key never reaches the app.
+- **Privacy:** the database builds the input (`ai_summary_input`): area and element names, %, status, band, days left, pace and weekly counts. No goal titles, notes, emails or ids. A test checks that a goal title, a note and the email address never appear in it.
+- **A fixed, simple reply format** (three headings, a list, short paragraphs):
+  - It is cleaned before storing, and the app draws it as plain text, never as HTML.
+  - Emails escape it.
+  - Anything else the model writes, such as links, tags or bold, is stripped.
+- **Monday run inside the hourly `notify` job:** no second scheduler. Each user gets their insight at their own send hour (07:00, or after quiet hours), before the digest email, which includes it. If a run fails, the next hour catches up.
+- **Refresh insight:** at most 5 a day per user, counted in the user's timezone (`ai_manual_left`).
+- **Hiding:** the card hides when the switch is off, or when the server reports no key (`unavailable`). A failed call shows a message and keeps the last insight. The rule-based advice is always shown (acceptance test 14).
+- **Export:** read in the browser through the user's own access rules, page by page, because the API returns at most 1,000 rows per request.
+  - **JSON** includes everything.
+  - **CSV** lists one row per goal. It carries a byte-order mark so Excel reads it as UTF-8, and formula-like text is prefixed with `'` so spreadsheets don't run it.
+- **Settings:** the "coming soon" placeholder now lists only Phase 7's account deletion.
+
+### Code review fixes (independent reviewer, before merging Phase 6)
+1. **High: no key, no card.** The card used to appear until a failed refresh hid it, and came back after a reload. Now the app asks the `ai-summary` function first (`probe`), and shows the card only when the server confirms a key. The answer is cached and saved on the device.
+2. **High: the daily limit could be raced.** Parallel requests all saw "5 left". Now `ai_claim` locks the user's profile row, counts today's attempts in `ai_usage`, and records one before Claude is called. Failed attempts count.
+3. **The hourly job can't be blocked by Claude:**
+   - Monday calls use a 25-second timeout with no retries.
+   - Each user gets at most 3 tries a Monday.
+   - Generation stops halfway through the job's time budget.
+4. **The digest waits for its insight** for up to two hourly runs, then goes without it.
+5. **Pace parity:** elements that haven't started can still be "behind", as in `advice.ts`. Only completed elements are "n/a".
+6. **Export:**
+   - It includes `daily_snapshots`.
+   - It pages until a page comes back empty, so a lower server cap can't cut it short.
+7. **Reply checks:** a reply needs headings, 1–6 actions and at most 220 words, or it is discarded.
+8. **Smaller fixes:** the availability check now needs a signed-in user, and the card's date uses the profile timezone.
+
 ## Open questions for the owner
 - **Google sign-in, left to do:** delete the old (hidden) client secret in Google Cloud, and publish the consent screen once the legal documents exist.
 - **VAPID subject:** switch to a support address (for example `mailto:support@thebusinessapostle.net`) when one exists.

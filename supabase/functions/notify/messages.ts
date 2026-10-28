@@ -1,5 +1,6 @@
 // Pure builders for the notify Edge Function: push payloads and email HTML/text.
-// No imports, so the same file runs in Deno (the function) and in Vitest (tests/unit).
+// Only pure imports, so the same file runs in Deno (the function) and in Vitest (tests/unit).
+import { insightHtml, insightText } from '../_shared/insight.ts';
 
 export interface AlertRow {
   id: string;
@@ -8,6 +9,7 @@ export interface AlertRow {
   element_id: string | null;
   kind: string;
   channel: 'push' | 'email' | 'in_app';
+  attempts: number;
   title: string | null;
   body: string | null;
   link: string | null;
@@ -133,7 +135,8 @@ ${button(href, 'Open in Progress Tracker')}`;
   };
 }
 
-export function digestEmail(d: DigestData, appUrl: string): EmailMessage {
+/** The Monday digest. `insight` is the AI weekly narrative (§7.2), when one was written. */
+export function digestEmail(d: DigestData, appUrl: string, insight?: string | null): EmailMessage {
   const pct = d.goals_total === 0 ? 0 : Math.round((d.goals_done / d.goals_total) * 100);
   const range = `${formatDay(d.week_start)} – ${formatDay(d.week_end)}`;
   const subject = `Your week: ${d.done_last_week} ${d.done_last_week === 1 ? 'goal' : 'goals'} completed`;
@@ -162,6 +165,7 @@ export function digestEmail(d: DigestData, appUrl: string): EmailMessage {
 <p style="margin:4px 0 16px;font-size:16px;color:#475569;">${escapeHtml(range)}</p>
 <table role="presentation" style="width:100%;border-collapse:collapse;">${rows}</table>
 ${focus}
+${insight ? `<h2 style="margin:24px 0 0;font-size:18px;">Your coach’s take</h2>${insightHtml(insight)}` : ''}
 ${button(`${appUrl}/`, 'Open your dashboard')}`;
   const text = [
     `Your week in review (${range})`,
@@ -170,6 +174,7 @@ ${button(`${appUrl}/`, 'Open your dashboard')}`;
     '',
     d.focus.length ? 'Focus now:' : 'Nothing is overdue or due in the next 14 days.',
     ...d.focus.map((f) => `- ${f.title} · ${f.element_name} · ${dueLabel(f.days_left)}`),
+    ...(insight ? ['', 'Your coach’s take:', insightText(insight)] : []),
     '',
     `Open your dashboard: ${appUrl}/`,
     `Change email alerts in Settings: ${appUrl}/settings`,

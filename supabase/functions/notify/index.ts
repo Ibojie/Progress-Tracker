@@ -6,6 +6,8 @@
 // VAPID_PRIVATE_KEY, VAPID_SUBJECT. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0';
 import { sendWebPush, type VapidKeys } from './webpush.ts';
+import { aiConfigured, writeInsight } from '../_shared/claude.ts';
+import { addDaysIso, type InsightInput } from '../_shared/insight.ts';
 import { alertEmail, digestEmail, isPushEndpoint, pushPayload, type AlertRow, type DigestData } from './messages.ts';
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://progress.thebusinessapostle.net';
@@ -81,10 +83,66 @@ async function sendEmail(to: string, msg: { subject: string; html: string; text:
   return res.ok ? null : `email ${res.status} ${(await res.text()).slice(0, 300)}`;
 }
 
+/** Writes the Monday insight for each user who is due one. A failure is retried next hour. */
+async function writeWeeklyInsights(
+  db: SupabaseClient,
+  started: number,
+): Promise<{ written: number; failed: number; pending: Set<string> }> {
+  // Users still waiting for this Monday's insight: their digest waits for it (a run or two).
+  const pending = new Set<string>();
+  if (!aiConfigured()) return { written: 0, failed: 0, pending };
+  const due = await db.rpc('ai_weekly_due');
+  if (due.error) {
+    console.error('ai_weekly_due', due.error.message);
+    return { written: 0, failed: 0, pending };
+  }
+  let written = 0;
+  let failed = 0;
+  for (const { user_id, today } of (due.data ?? []) as { user_id: string; today: string }[]) {
+    pending.add(user_id);
+    // Leave most of the run for deliveries; the rest are picked up next hour.
+    if (Date.now() - started > TIME_BUDGET_MS / 2) continue;
+    const input = await db.rpc('ai_summary_input', { p_user: user_id, p_today: today });
+    if (input.error || !input.data) {
+      failed++;
+      continue;
+    }
+    // Counts the try (3 per Monday at most), so a call that keeps failing isn't paid for all day.
+    const claim = await db.rpc('ai_claim', { p_user: user_id, p_trigger: 'weekly' });
+    if (claim.error || (claim.data as number) < 0) continue;
+    const result = await writeInsight(input.data as InsightInput, { timeoutMs: 25_000, maxRetries: 0 });
+    if (!result.ok) {
+      console.error('weekly insight failed', result.reason, result.detail);
+      failed++;
+      continue;
+    }
+    const saved = await db.from('ai_summaries').insert({
+      user_id,
+      period_start: addDaysIso(today, -7),
+      period_end: today,
+      content_md: result.text,
+      model: result.model,
+      trigger: 'weekly',
+    });
+    if (saved.error) failed++;
+    else {
+      written++;
+      pending.delete(user_id);
+    }
+  }
+  return { written, failed, pending };
+}
+
+/** A Monday digest waits up to two hourly runs for its insight, then goes without it. */
+const DIGEST_WAITS_FOR_INSIGHT = 2;
+
 async function runCron(db: SupabaseClient): Promise<Response> {
   const started = Date.now();
   const queued = await db.rpc('queue_notifications');
   if (queued.error) return json(500, { error: queued.error.message });
+
+  // Monday AI insights (§7.2), written before the digests below so the emails can include them.
+  const insights = await writeWeeklyInsights(db, started);
 
   const vapid = vapidKeys();
   const emails = new Map<string, string | null>();
@@ -110,6 +168,11 @@ async function runCron(db: SupabaseClient): Promise<Response> {
       left++;
       continue;
     }
+    if (row.kind === 'weekly_digest' && insights.pending.has(row.user_id) && row.attempts <= DIGEST_WAITS_FOR_INSIGHT) {
+      await db.rpc('finish_delivery', { p_id: row.id, p_ok: false, p_error: 'waiting for the weekly insight' });
+      left++;
+      continue;
+    }
     let error: string | null = null;
     try {
       if (row.channel === 'push') {
@@ -119,7 +182,10 @@ async function runCron(db: SupabaseClient): Promise<Response> {
         if (!to) error = 'no email address';
         else if (row.kind === 'weekly_digest') {
           const d = await db.rpc('weekly_digest_data', { p_user: row.user_id, p_today: row.sent_on });
-          error = d.error ? d.error.message : await sendEmail(to, digestEmail(d.data as DigestData, APP_URL), row.id);
+          const ai = await db.rpc('ai_weekly_for', { p_user: row.user_id, p_today: row.sent_on });
+          error = d.error
+            ? d.error.message
+            : await sendEmail(to, digestEmail(d.data as DigestData, APP_URL, (ai.data as string | null) ?? null), row.id);
         } else {
           error = await sendEmail(to, alertEmail(row, APP_URL), row.id);
         }
@@ -132,7 +198,13 @@ async function runCron(db: SupabaseClient): Promise<Response> {
     if (error) failed++;
     else delivered++;
   }
-  return json(200, { queued: queued.data, delivered, failed, deferred: left });
+  return json(200, {
+    queued: queued.data,
+    delivered,
+    failed,
+    deferred: left,
+    insights: { written: insights.written, failed: insights.failed, waiting: insights.pending.size },
+  });
 }
 
 async function runTest(db: SupabaseClient, req: Request): Promise<Response> {
