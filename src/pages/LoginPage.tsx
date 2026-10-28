@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
+import { LegalLinks } from '@/features/legal/LegalLinks';
 import { Mail, Target } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -145,6 +146,11 @@ export function LoginPage() {
           </p>
         )}
       </div>
+      <p className="mt-6 max-w-md text-center text-label text-muted-foreground">
+        By continuing you agree to the <Link to="/terms">Terms of Service</Link> and confirm you’ve read the{' '}
+        <Link to="/privacy">Privacy Policy</Link>.
+      </p>
+      <LegalLinks className="mt-2 text-label" />
     </main>
   );
 }

@@ -16,6 +16,7 @@ import { NotificationSettings } from '@/features/notifications/NotificationSetti
 import { AiSettings } from '@/features/insight/AiSettings';
 import { ExportCard } from '@/features/export/ExportCard';
 import { DeleteAccountCard } from '@/features/account/DeleteAccountCard';
+import { LegalLinks } from '@/features/legal/LegalLinks';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -121,6 +122,16 @@ export function SettingsPage() {
         </Card>
 
         <ExportCard />
+
+        <Card id="legal">
+          <CardHeader>
+            <CardTitle>Legal and privacy</CardTitle>
+            <CardDescription>How your data is handled, the terms of use, and how to delete your account.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LegalLinks />
+          </CardContent>
+        </Card>
 
         <DeleteAccountCard />
       </div>

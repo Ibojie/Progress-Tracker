@@ -159,3 +159,25 @@ for (const theme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test('legal pages are public, linked from sign-in, and accessible (Google Play needs public URLs)', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('navigation', { name: 'Legal' }).getByRole('link', { name: 'Privacy Policy' }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeVisible();
+  await expect(page.getByText('The Business Apostle').first()).toBeVisible();
+  for (const [path, title] of [
+    ['/privacy', 'Privacy Policy'],
+    ['/terms', 'Terms of Service'],
+    ['/fair-use', 'Fair Use Policy'],
+    ['/refunds', 'Refund Policy'],
+    ['/account-deletion', 'Delete your Progress Tracker account'],
+  ] as const) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expectAccessible(page);
+  }
+  // A section link works straight from the address (the deletion section of the privacy policy).
+  await page.goto('/privacy#retention');
+  await expect(page.getByRole('heading', { name: 'How long we keep it' })).toBeInViewport();
+});
