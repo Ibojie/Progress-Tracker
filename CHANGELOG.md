@@ -2,6 +2,18 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-10-28 - Push fixes from the owner's device tests
+
+### Fixed
+- **Push notifications now show on Android.** The server's push encryption was replaced: phones silently dropped the old messages.
+- Pushes are sent at high priority, so they aren't delayed while the phone sleeps.
+- The bell lights up and refreshes as soon as a notification arrives, and test pushes appear in it.
+- On desktop Chrome, turning push on retries automatically if the first try fails.
+- New versions of the app switch over by themselves when it's safe, instead of waiting behind **Update now**.
+
+### Added
+- **Send test push** now reports whether the push reached the device, and **Local test** checks the device's own notification settings.
+
 ## [0.5.0] - 2026-10-28 - Phase 5: notifications
 
 Live at https://progress.thebusinessapostle.net (the custom domain), with Google sign-in.

@@ -272,6 +272,15 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
    - permission is requested first on iPhone;
    - user-lookup errors are reported.
 
+### After release: device tests (v0.5.x)
+- **Push sender rewritten:** the npm `web-push` library ran under Supabase's Deno runtime, and Google's push service accepted its messages, but Android silently dropped them. They couldn't be decrypted. `supabase/functions/notify/webpush.ts` now does RFC 8291/8188 encryption and RFC 8292 VAPID with Web Crypto only. A test decrypts its output with Node's crypto, as a browser does.
+- **High urgency:** pushes are sent with `Urgency: high` so Android doesn't hold them while the phone is idle.
+- **Test push diagnostics:** Settings reports whether a test push reached the device and whether the device showed it. A **Local test** shows a notification without the server.
+- **Bell:** it refreshes when a push arrives or the app returns to the front, and turns into a highlighted ringing bell while anything is unread. A test push also adds an entry to the bell.
+- **Desktop Chrome:** the first subscribe can fail ("Error retrieving push subscription") while Chrome's push connection starts. It now retries once after 2 seconds.
+- **Updates apply themselves when safe:** a waiting new version kept old code running on the owner's devices three times. It now switches automatically right after the app opens or when it goes to the background, as long as no offline changes are waiting. Otherwise **Update now** is offered as before.
+- **Owner's result:** push works on Android (installed app) and on Windows Chrome.
+
 ## Open questions for the owner
 - **Google sign-in, left to do:** delete the old (hidden) client secret in Google Cloud, and publish the consent screen once the legal documents exist.
 - **VAPID subject:** switch to a support address (for example `mailto:support@thebusinessapostle.net`) when one exists.
