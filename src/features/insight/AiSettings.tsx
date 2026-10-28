@@ -7,6 +7,7 @@ import { useNotice } from '@/components/Notice';
 import { useProfile } from '@/features/profile/useProfile';
 import { useUpdateProfile } from '@/features/notifications/api';
 import { NEEDS_CONNECTION, useOnline } from '@/lib/useOnline';
+import { useRefreshAiQueries } from './api';
 
 /** Settings → AI weekly insight (§7.2): the on/off switch and what is shared. */
 export function AiSettings() {
@@ -15,6 +16,7 @@ export function AiSettings() {
   const update = useUpdateProfile();
   const online = useOnline();
   const { notify } = useNotice();
+  const refreshAi = useRefreshAiQueries();
   if (!profile) return null;
 
   return (
@@ -44,7 +46,10 @@ export function AiSettings() {
               disabled={!online}
               title={online ? undefined : NEEDS_CONNECTION}
               onCheckedChange={(on) =>
-                update.mutate({ ai_summary_enabled: on }, { onError: (e) => notify(`Couldn’t save that setting. ${e.message}`) })
+                update.mutate(
+                  { ai_summary_enabled: on },
+                  { onSuccess: refreshAi, onError: (e) => notify(`Couldn’t save that setting. ${e.message}`) },
+                )
               }
             />
           </span>

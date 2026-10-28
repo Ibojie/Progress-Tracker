@@ -24,12 +24,13 @@ export function useAiStatus() {
   return useQuery({
     queryKey: STATUS_KEY(user?.id),
     enabled: !!supabase && !!user,
-    staleTime: 5 * 60_000,
-    retry: false,
+    staleTime: 60_000,
+    retry: 2,
     queryFn: async (): Promise<AiStatus> => {
       const { data, error } = await supabase!.functions.invoke<AiStatus>('ai-summary', { body: { probe: true } });
-      // A failed check (offline, function not deployed) counts as "not set up": hide the card.
-      if (error || !data) return { configured: false, left: 0 };
+      // A failed check (offline, slow start) is retried, not remembered as "not set up": until it
+      // succeeds the card stays hidden, and the next successful check shows it.
+      if (error || !data) throw error ?? new Error('No answer from the AI check.');
       return data;
     },
   });
@@ -47,6 +48,16 @@ export function useLatestInsight() {
       return data[0] ?? null;
     },
   });
+}
+
+/** After the AI switch changes, re-ask the server and reload the latest insight. */
+export function useRefreshAiQueries() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return () => {
+    void qc.invalidateQueries({ queryKey: STATUS_KEY(user?.id) });
+    void qc.invalidateQueries({ queryKey: KEY(user?.id) });
+  };
 }
 
 export function useRefreshInsight() {

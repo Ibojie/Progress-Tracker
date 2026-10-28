@@ -3,6 +3,8 @@
 import DashboardCharts from '@/features/dashboard/charts/DashboardCharts';
 import type { DashboardData } from '@/features/dashboard/useDashboard';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AdviceCard } from '@/features/dashboard/AdviceCard';
+import { ShowMore } from '@/components/ShowMore';
 import { PERIOD_LABEL, addDays, buildAdvice, computeKpis, periodPair, type AdviceElement } from '@/lib/engine';
 
 const TODAY = '2026-10-28';
@@ -61,6 +63,24 @@ export default function ChartsPreview() {
         <h1 className="text-h2 font-bold">Charts preview (development only)</h1>
         <ThemeToggle />
       </div>
+      <section className="glass mb-6 rounded-lg p-6">
+        <h2 className="mb-3 text-h3 font-semibold">Your weekly insight (sample)</h2>
+        <ShowMore storageKey="pt-dev-insight-open" collapsedRem={12}>
+          <div className="text-body">
+            <h3 className="mb-1 font-semibold">Do this week</h3>
+            <ul className="mb-3 list-disc space-y-1 pl-6">
+              <li>Book the PMI mock exam before Friday so the study plan has a fixed date to work towards.</li>
+              <li>Tick off one NEBOSH unit; it is the closest deadline and is behind pace.</li>
+              <li>Spend 20 minutes on the Investment plan, which has not moved for two weeks.</li>
+            </ul>
+            <h3 className="mb-1 mt-3 font-semibold">Watch</h3>
+            <p className="mb-3">Investment is lagging at 22% with two goals overdue; a small step this week stops it slipping further.</p>
+            <h3 className="mb-1 mt-3 font-semibold">Celebrate</h3>
+            <p className="mb-3">Paid Job is at 100%: every goal there is done. That is a real win worth noting.</p>
+          </div>
+        </ShowMore>
+      </section>
+      <AdviceCard advice={data.advice} />
       <DashboardCharts data={data} />
     </main>
   );
