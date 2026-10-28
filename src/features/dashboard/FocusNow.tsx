@@ -41,7 +41,11 @@ export function FocusNow({ data }: { data: DashboardData }) {
                     id={id}
                     type="checkbox"
                     checked={false}
-                    onChange={() => toggle.mutate({ goalId: item.goalId, isDone: true })}
+                    onChange={(e) => {
+                      e.target.classList.add('ticked');
+                      toggle.mutate({ goalId: item.goalId, isDone: true });
+                    }}
+                    onAnimationEnd={(e) => e.currentTarget.classList.remove('ticked')}
                     className="tick-box size-6 cursor-pointer accent-[rgb(var(--done))]"
                   />
                   <span className="sr-only">

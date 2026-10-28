@@ -2,6 +2,31 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-10-30 - Phase 7: polish and launch-readiness
+
+### Added
+- **Settings → Delete my account:**
+  - permanently deletes the account and everything in it;
+  - you type DELETE to confirm, with a reminder to export first;
+  - afterwards it signs out and shows a confirmation on the sign-in page.
+- **Moments of delight:** a small pop when a goal is ticked, and confetti when an element's last goal is done. They always play; with reduced motion they use a calm glow and gently drifting confetti.
+- **End-to-end tests (Playwright),** run in CI on every push at desktop and phone sizes:
+  - sign-in, the dashboard, and acceptance tests 1, 12, 14 and 15;
+  - keyboard use, 320px phones and account deletion;
+  - an automatic WCAG AA check on every main screen in light and dark mode.
+- **Recovery screen:** if a screen can't load because a new version replaced it, the app reloads itself once, or shows **Reload** instead of a blank page.
+
+### Changed
+- **Faster start:**
+  - Screens load on demand, and the start-up download is 37% smaller (240 → 151 kB).
+  - Lighthouse mobile: Performance 97, Accessibility 100, Best practices 100.
+  - Moving to a screen keeps the header and menus on view while it loads.
+
+### Fixed
+- **Completion gauges:** their screen-reader names now begin with the visible label.
+- **Tick animation:** only the goal you just ticked animates, not every finished goal when a list appears.
+- **Confetti:** it is judged on the tick itself, so two quick taps on the last goals still celebrate.
+
 ## [0.6.1] - 2026-10-28 - Owner feedback on the dashboard cards
 
 ### Added

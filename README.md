@@ -4,7 +4,7 @@ A personal Progressive Web App for tracking goals and deadlines in four areas of
 
 The full specification is in [`docs/PROGRESS_TRACKER_BUILD_PROMPT.md`](docs/PROGRESS_TRACKER_BUILD_PROMPT.md). Assumptions are logged in [`DECISIONS.md`](DECISIONS.md) and releases in [`CHANGELOG.md`](CHANGELOG.md).
 
-**Status:** Phase 6 (AI weekly insight and data export) released as v0.6.0. Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
+**Status:** all seven build phases done (Phase 7, polish and launch-readiness, released as v0.7.0). Live at https://progress.thebusinessapostle.net (also https://progress-tracker-phi-five.vercel.app). See the changelog for what works today.
 
 ## Stack
 
@@ -28,6 +28,7 @@ Without the two Supabase values the app still starts and shows a setup screen.
 | `npm test` | Unit tests plus the database tests (migrations run in an in-memory Postgres) |
 | `npm run lint` / `npm run typecheck` | ESLint and TypeScript checks |
 | `npm run build` | Production build into `dist/` |
+| `npm run e2e` | End-to-end tests in a real browser (Playwright), desktop and phone sizes. Run `npx playwright install chromium` once first |
 
 ## Environment variables
 
@@ -106,6 +107,19 @@ The GitHub repo is connected to Vercel. Every pull request gets a preview URL an
 - **Desktop (Chrome or Edge):** use the install icon in the address bar.
 
 Once installed, the app opens offline with your saved data. Ticks and edits made offline sync when you're back online.
+
+## End-to-end tests
+
+`npm run e2e` builds the app and drives it in Chromium at desktop and phone sizes.
+- **No real account:** the app talks to an in-memory fake Supabase (`e2e/fakeSupabase.ts`), so no account or live data is involved, and CI needs no secrets.
+- **What they cover:**
+  - the sign-in page;
+  - acceptance tests 1, 12, 14 and 15;
+  - the confetti on completion;
+  - keyboard use and 320px phones;
+  - account deletion;
+  - an automatic WCAG 2.1 AA check (axe) on every main screen in light and dark mode.
+- **On failure:** CI runs them on every push and uploads a Playwright report.
 
 ## Workflow
 

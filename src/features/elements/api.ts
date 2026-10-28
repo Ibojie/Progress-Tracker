@@ -169,6 +169,7 @@ function useQueuedMutation<TVars>(
   mutationKey: MutationKey,
   apply: (rows: ElementWithGoals[] | undefined, vars: TVars) => ElementWithGoals[] | undefined,
   failure: string,
+  onApplied?: (previous: ElementWithGoals[] | undefined, vars: TVars) => void,
 ) {
   const queryClient = useQueryClient();
   const key = useElementsKey();
@@ -179,6 +180,7 @@ function useQueuedMutation<TVars>(
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<ElementWithGoals[]>(key);
       queryClient.setQueryData<ElementWithGoals[]>(key, (rows) => apply(rows, vars));
+      onApplied?.(previous, vars);
       return { previous };
     },
     onError: (error, _vars, context) => {
@@ -193,17 +195,17 @@ function useQueuedMutation<TVars>(
 
 /** Tick or untick a goal (§6.3). Works offline, and remembers when the box was tapped. */
 export function useToggleGoal() {
-  const queryClient = useQueryClient();
-  const key = useElementsKey();
-  const m = useQueuedMutation<ToggleGoalVars>(QUEUED.toggleGoal, (rows, v) => applyToggle(rows, v, new Date().toISOString()), 'Couldn’t save the tick.');
-  return {
-    ...m,
-    mutate: (vars: Omit<ToggleGoalVars, 'tickedAt'>) => {
-      // Confetti when this tick finishes the element (§10): every other goal is already done.
-      if (vars.isDone && completesElement(queryClient.getQueryData<ElementWithGoals[]>(key), vars.goalId)) celebrate();
-      m.mutate({ ...vars, tickedAt: new Date().toISOString() });
+  const m = useQueuedMutation<ToggleGoalVars>(
+    QUEUED.toggleGoal,
+    (rows, v) => applyToggle(rows, v, new Date().toISOString()),
+    'Couldn’t save the tick.',
+    // Confetti when this tick finishes the element (§10), judged on the rows the tick lands on,
+    // so two quick taps on the last goals still celebrate once.
+    (previous, v) => {
+      if (v.isDone && completesElement(previous, v.goalId)) celebrate();
     },
-  };
+  );
+  return { ...m, mutate: (vars: Omit<ToggleGoalVars, 'tickedAt'>) => m.mutate({ ...vars, tickedAt: new Date().toISOString() }) };
 }
 
 /** True when ticking this goal would make its element 100% done. */

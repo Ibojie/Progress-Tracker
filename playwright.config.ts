@@ -25,7 +25,8 @@ export default defineConfig({
   webServer: {
     command: `npx vite build --outDir dist-e2e --emptyOutDir && npx vite preview --outDir dist-e2e --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
+    // Always a fresh build, so a leftover preview server can't serve old code.
+    reuseExistingServer: false,
     timeout: 180_000,
     env: {
       VITE_SUPABASE_URL: 'https://e2e.supabase.co',

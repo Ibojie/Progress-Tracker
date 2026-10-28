@@ -1,77 +1,45 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
-import { RequireAuth } from "@/features/auth/RequireAuth";
-import { ThemeProfileSync } from "@/features/auth/ThemeProfileSync";
-import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
-import { LoginPage } from "@/pages/LoginPage";
-import { SetupPage } from "@/pages/SetupPage";
-import { UpdatePrompt } from "@/features/pwa/UpdatePrompt";
+import { lazy, Suspense, type ComponentType } from 'react';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { AppShell } from '@/components/layout/AppShell';
+import { LoadErrorBoundary } from '@/components/LoadErrorBoundary';
+import { RequireAuth } from '@/features/auth/RequireAuth';
+import { ThemeProfileSync } from '@/features/auth/ThemeProfileSync';
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { SetupPage } from '@/pages/SetupPage';
+import { UpdatePrompt } from '@/features/pwa/UpdatePrompt';
 
-// The signed-in app loads screen by screen (Lighthouse, §11): the sign-in page doesn't download
-// the dashboard, and each screen arrives the first time it's opened (then the service worker has it).
-const named = <K extends string>(
-  load: () => Promise<Record<K, React.ComponentType>>,
-  name: K,
-) => lazy(() => load().then((m) => ({ default: m[name] })));
-const AppShell = named(
-  () => import("@/components/layout/AppShell"),
-  "AppShell",
-);
-const DashboardPage = named(
-  () => import("@/pages/DashboardPage"),
-  "DashboardPage",
-);
-const CategoriesPage = named(
-  () => import("@/pages/CategoriesPage"),
-  "CategoriesPage",
-);
-const CategoryPage = named(
-  () => import("@/pages/CategoryPage"),
-  "CategoryPage",
-);
-const ElementDetailPage = named(
-  () => import("@/pages/ElementDetailPage"),
-  "ElementDetailPage",
-);
-const TimelinePage = named(
-  () => import("@/pages/TimelinePage"),
-  "TimelinePage",
-);
-const NewElementPage = named(
-  () => import("@/pages/NewElementPage"),
-  "NewElementPage",
-);
-const SettingsPage = named(
-  () => import("@/pages/SettingsPage"),
-  "SettingsPage",
-);
-const NotFoundPage = named(
-  () => import("@/pages/NotFoundPage"),
-  "NotFoundPage",
-);
+// The signed-in screens load on demand (Lighthouse, §11): the sign-in page doesn't download
+// them, and each arrives the first time it's opened (then the service worker keeps it).
+// The shell (header, menus) is small and loads straight away, so it stays on screen meanwhile.
+const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+const loadDashboard = () => import('@/pages/DashboardPage');
+const DashboardPage = named(loadDashboard, 'DashboardPage');
+const CategoriesPage = named(() => import('@/pages/CategoriesPage'), 'CategoriesPage');
+const CategoryPage = named(() => import('@/pages/CategoryPage'), 'CategoryPage');
+const ElementDetailPage = named(() => import('@/pages/ElementDetailPage'), 'ElementDetailPage');
+const TimelinePage = named(() => import('@/pages/TimelinePage'), 'TimelinePage');
+const NewElementPage = named(() => import('@/pages/NewElementPage'), 'NewElementPage');
+const SettingsPage = named(() => import('@/pages/SettingsPage'), 'SettingsPage');
+const NotFoundPage = named(() => import('@/pages/NotFoundPage'), 'NotFoundPage');
 
-function Loading() {
-  return (
-    <p role="status" className="page-shell py-6">
-      Loading…
-    </p>
-  );
-}
+// Signed in: start fetching the dashboard while the session is checked, not after.
+if (typeof window !== 'undefined') void loadDashboard().catch(() => {});
 
 // Development-only layout check for the charts; the import is dropped from production builds.
-const ChartsPreview = import.meta.env.DEV
-  ? lazy(() => import("@/dev/ChartsPreview"))
-  : null;
+const ChartsPreview = import.meta.env.DEV ? lazy(() => import('@/dev/ChartsPreview')) : null;
 
 export function App() {
   if (!supabase) return <SetupPage />;
 
   return (
-    <BrowserRouter>
+    // v7_startTransition: moving to a screen that's still loading keeps the current one showing.
+    <BrowserRouter future={{ v7_startTransition: true }}>
       <ThemeProfileSync />
       <UpdatePrompt />
-      <Suspense fallback={<Loading />}>
+      <LoadErrorBoundary>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -102,7 +70,7 @@ export function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
-      </Suspense>
+      </LoadErrorBoundary>
     </BrowserRouter>
   );
 }

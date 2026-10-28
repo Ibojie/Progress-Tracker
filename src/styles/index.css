@@ -197,7 +197,7 @@
   40% { transform: scale(1.3); }
   100% { transform: scale(1); }
 }
-.tick-box:checked {
+.tick-box.ticked {
   animation: tick-pop 260ms ease-out;
 }
 @keyframes tick-glow {
@@ -206,7 +206,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   /* More specific than the "*" rule below, so the calm version still plays. */
-  .tick-box:checked {
+  .tick-box.ticked {
     animation: tick-glow 600ms ease-out !important;
     animation-duration: 600ms !important;
   }

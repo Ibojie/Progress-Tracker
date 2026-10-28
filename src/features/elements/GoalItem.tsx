@@ -38,8 +38,13 @@ export function GoalItem({ goal, position, count, disabled, online, onToggle, on
             type="checkbox"
             checked={row.is_done}
             disabled={disabled}
-            onChange={(e) => onToggle(e.target.checked)}
-            className="tick-box size-6 cursor-pointer accent-[rgb(var(--done))]"
+            onChange={(e) => {
+              // Only the box just ticked animates (not every done goal when the list appears).
+              if (e.target.checked) e.target.classList.add('ticked');
+              onToggle(e.target.checked);
+            }}
+            onAnimationEnd={(e) => e.currentTarget.classList.remove('ticked')}
+                    className="tick-box size-6 cursor-pointer accent-[rgb(var(--done))]"
             aria-describedby={`${checkboxId}-meta`}
           />
           <span className="sr-only">Mark “{row.title}” as {row.is_done ? 'not done' : 'done'}</span>

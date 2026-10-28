@@ -115,6 +115,7 @@ function matches(row: Row, params: URLSearchParams): boolean {
     if (op === 'eq' && String(row[col]) !== value) return false;
     if (op === 'in' && !value.replace(/^\(|\)$/g, '').split(',').includes(String(row[col]))) return false;
     if (op === 'gte' && String(row[col]) < value) return false;
+    if (!['eq', 'in', 'gte'].includes(op!)) throw new Error(`fake Supabase: add support for the "${op}" filter (${col})`);
   }
   return true;
 }
@@ -258,8 +259,10 @@ export async function signIn(page: Page): Promise<void> {
   );
 }
 
+/** A calendar day relative to today in Lagos (the app's timezone), as YYYY-MM-DD. */
 export function isoDay(offset: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+  const d = new Date(`${today}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + offset);
   return d.toISOString().slice(0, 10);
 }

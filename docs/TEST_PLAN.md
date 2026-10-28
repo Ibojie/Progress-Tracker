@@ -46,3 +46,21 @@ Tests are layered: many fast unit tests, some database tests, and (from Phase 7)
   - The count of refreshes left drops.
   - Switching AI off hides the card.
   - Both exports open correctly.
+
+## End-to-end and launch checks (Phase 7)
+- **Playwright (`e2e/app.spec.ts`)** runs at desktop and phone sizes against the in-memory fake Supabase:
+  - the sign-in page;
+  - the dashboard with the AI card hidden when no key is set (test 14);
+  - PMI 2027 moving through In Progress 25%, Completed 100% (with confetti) and back to 75% (test 1);
+  - the wizard and the 10-goal limit (test 12);
+  - the theme switch surviving a reload (test 15);
+  - the skip link and keyboard use;
+  - no sideways scrolling at 320px;
+  - account deletion.
+- **Accessibility:** axe WCAG 2.1 A/AA checks with zero serious or critical issues on every main screen (dashboard, areas, an area, an element, timeline, Settings, the wizard) in light and dark mode.
+- **Account deletion (`tests/db/accountDeletion.test.ts`):** it needs the word DELETE and a signed-in user, removes rows from all 11 tables, and leaves other users untouched.
+- **Lighthouse (mobile):** Performance at least 90, Accessibility at least 95. Measured 97 and 100 on a production build.
+- **Owner's tests:**
+  - Delete a **spare test account**.
+  - Check the tick pop and the confetti on the phone.
+  - A look-and-feel pass in both themes.

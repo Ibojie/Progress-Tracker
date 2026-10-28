@@ -2,34 +2,31 @@
 // removes itself). It always plays (owner's choice); when the device asks for reduced motion it's
 // a calm version: fewer pieces drifting down slowly from the top, no burst or spin.
 
-const COLOURS = ["#2A78D6", "#EB6834", "#1BAF7A", "#EDA100", "#9B5DE5"];
+const COLOURS = ['#2A78D6', '#EB6834', '#1BAF7A', '#EDA100', '#9B5DE5'];
 
 export function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  );
+  return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
 export function celebrate(): void {
-  if (typeof document === "undefined") return;
+  if (typeof document === 'undefined') return;
   const calm = prefersReducedMotion();
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = window.innerWidth;
   const h = window.innerHeight;
   canvas.width = w * dpr;
   canvas.height = h * dpr;
-  canvas.setAttribute("aria-hidden", "true");
+  canvas.setAttribute('aria-hidden', 'true');
   Object.assign(canvas.style, {
-    position: "fixed",
-    inset: "0",
-    width: "100%",
-    height: "100%",
-    pointerEvents: "none",
-    zIndex: "60",
+    position: 'fixed',
+    inset: '0',
+    width: '100%',
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: '60',
   });
   document.body.appendChild(canvas);
   ctx.scale(dpr, dpr);

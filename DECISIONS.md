@@ -314,6 +314,39 @@ The database fixes are in `20261027000100_snapshot_totals.sql`.
 7. **Reply checks:** a reply needs headings, 1–6 actions and at most 220 words, or it is discarded.
 8. **Smaller fixes:** the availability check now needs a signed-in user, and the card's date uses the profile timezone.
 
+## Phase 7: polish and launch-readiness
+- **Account deletion (Google Play):** `delete_my_account('DELETE')` deletes the auth user, and every table cascades from it. The app then signs out on this device, unsubscribes push and clears the saved data. The word DELETE is checked in the database too, so a stray call can't delete an account.
+- **Moments of delight:**
+  - Ticking a goal gives a small pop.
+  - Finishing an element's last goal gives 1.5 seconds of confetti, drawn on a self-removing canvas with no library.
+  - **The owner asked for both to always play.** When the device asks for reduced motion they play in a calm form: a glow instead of the pop, and gently drifting confetti with no burst or spin.
+- **Liquid Glass JS skipped:** the spec makes it optional, and it would cost start-up speed. The CSS frosted glass stays everywhere.
+- **Speed:**
+  - Every signed-in screen loads on demand.
+  - `zod` is no longer in the start-up bundle: plain checks for the setup values and the email box.
+  - The start-up JavaScript went from 240 to 151 kB (gzip).
+  - Lighthouse mobile on a production build: Performance 97, Accessibility 100, Best practices 100. Before: 89, 100, 100 on the live site.
+- **End-to-end tests:** Playwright drives a production build against an in-memory fake Supabase, so there are no accounts, no live data and no CI secrets. axe checks WCAG 2.1 A/AA on every main screen in both themes at desktop and phone sizes.
+- **Accessibility fix found by axe:** the completion gauges' links now say their visible label first, so voice-control users can say what they see.
+
+### Code review fixes (independent reviewer, before merging Phase 7)
+1. **High: a screen that fails to load blanked the app.** After an update in another tab, an old screen file can be gone.
+   - A load-error boundary now catches it.
+   - A `vite:preloadError` listener reloads once, guarded so it can't loop.
+   - Otherwise the user sees **Reload**.
+2. **The whole app flashed "Loading…" on each new screen.**
+   - The shell now loads straight away, and the loading message sits inside it.
+   - `v7_startTransition` keeps the current screen while the next one loads.
+   - The dashboard file starts downloading at once.
+3. **Every finished goal re-animated when a list appeared.** The pop now uses a class set only by the tap, removed when the animation ends.
+4. **Confetti timing:** confetti now fires from the moment the tick is applied, judged on the rows it applies to, so quick double taps work.
+5. **End-to-end robustness:**
+   - Dates are built in Lagos time.
+   - The fake server rejects filters it doesn't understand.
+   - Playwright always builds fresh.
+6. **Still to check on the live database:** a deletion on hosted Supabase. The owner deletes a spare test account. Other signed-in devices keep a valid token for up to an hour, but their writes are then rejected.
+7. **Prettier settings** (`.prettierrc`: single quotes, 140 columns) match the project's existing style. Two files that had been formatted with double quotes were restored.
+
 ## Open questions for the owner
 - **Google sign-in, left to do:** delete the old (hidden) client secret in Google Cloud, and publish the consent screen once the legal documents exist.
 - **VAPID subject:** switch to a support address (for example `mailto:support@thebusinessapostle.net`) when one exists.
