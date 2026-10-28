@@ -2,6 +2,15 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.3] - 2026-10-28 - Logo in every remaining place
+
+### Added
+- **Emails:** the logo is in the header of reminder and Monday digest emails.
+- **Android notifications:** a white status-bar badge (96 px) instead of the generic browser icon.
+- **Tab icon fallback:** a 48 px PNG for browsers without SVG icons.
+- **Android adaptive icon:** a 192 px version.
+- **Link previews:** a 1200×630 card with the logo when the app's address is shared on WhatsApp, X, LinkedIn or Facebook.
+
 ## [0.7.2] - 2026-10-28 - New logo
 
 ### Changed

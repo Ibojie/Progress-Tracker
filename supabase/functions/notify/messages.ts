@@ -107,7 +107,7 @@ function layout(title: string, inner: string, appUrl: string): string {
 <body style="margin:0;padding:0;background:#F1F5FF;font-family:Inter,Segoe UI,Arial,sans-serif;color:#0F172A;">
 <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
 <div style="background:#FFFFFF;border-radius:12px;padding:24px;border:1px solid #DBE3F4;">
-<p style="margin:0 0 16px;font-size:14px;font-weight:700;color:#1E40AF;">Progress Tracker</p>
+<p style="margin:0 0 16px;font-size:14px;font-weight:700;color:#1E40AF;"><img src="${appUrl}/pwa-192x192.png" width="32" height="32" alt="" style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;">Progress Tracker</p>
 ${inner}
 </div>
 <p style="margin:16px 0 0;font-size:14px;line-height:1.5;color:#475569;">

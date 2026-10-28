@@ -31,6 +31,8 @@ self.addEventListener('push', (event) => {
         await self.registration.showNotification(data.title ?? 'Progress Tracker', {
           body: data.body ?? '',
           icon: '/pwa-192x192.png',
+          // The small status-bar icon on Android: the white mark (Android colours it).
+          badge: '/badge-96.png',
           tag: data.tag,
           data: { url: data.url ?? '/' },
         });
