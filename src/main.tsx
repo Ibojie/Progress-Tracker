@@ -9,11 +9,18 @@ import { NoticeProvider } from '@/components/Notice';
 import { OFFLINE_MAX_AGE, queryClient } from '@/lib/queryClient';
 import { CACHE_BUSTER, persister } from '@/lib/offlineStorage';
 import { listenForInstallPrompt } from '@/features/pwa/install';
+import { reloadOnceForNewVersion } from '@/lib/chunkReload';
 import './styles/index.css';
 
 // TanStack Query assumes it starts online and only listens for later changes. Opening the app
 // already offline must keep queued changes paused, not send (and lose) them.
 onlineManager.setOnline(navigator.onLine);
+
+// A screen's file can disappear when a new version replaces the old one while the app is open
+// (another tab updated). Reload once to pick up the new version instead of failing.
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceForNewVersion()) event.preventDefault();
+});
 
 // Catch the browser's install offer as early as possible; it fires once, soon after load.
 listenForInstallPrompt();

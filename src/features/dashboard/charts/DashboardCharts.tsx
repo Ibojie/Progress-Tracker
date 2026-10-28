@@ -71,7 +71,13 @@ function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
               <div aria-hidden className="min-w-0 overflow-hidden">
                 <GaugeTile value={it.value} color={it.color} t={t} />
               </div>
-              <p className="text-center text-label font-semibold">{it.label}</p>
+              <p className="text-center text-label font-semibold">
+                {it.label}
+                {/* The spoken name starts with the visible label (voice control users say what they see). */}
+                <span className="sr-only">
+                  {it.full !== it.label ? ` (${it.full})` : ''}: {it.value}% complete
+                </span>
+              </p>
             </>
           );
           return (
@@ -80,7 +86,6 @@ function Gauges({ data, t }: { data: DashboardData; t: ChartTheme }) {
                 <Link
                   to={it.to}
                   className="block rounded-md p-1 text-foreground no-underline hover:bg-muted"
-                  aria-label={`${it.full}: ${it.value}% complete`}
                 >
                   {body}
                 </Link>

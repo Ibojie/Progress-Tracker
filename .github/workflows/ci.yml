@@ -25,6 +25,26 @@ jobs:
       - run: npm run test:coverage   # fails if src/lib/engine drops below 90%
       - run: npm run build
 
+  e2e:
+    name: End-to-end tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Builds the app against the in-memory fake Supabase (e2e/fakeSupabase.ts): no secrets needed.
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest

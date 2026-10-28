@@ -12,3 +12,8 @@ supabase/.branches
 playwright-report
 test-results
 .claude
+
+# Playwright
+dist-e2e/
+test-results/
+playwright-report/

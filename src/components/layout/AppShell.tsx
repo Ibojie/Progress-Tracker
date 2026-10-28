@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Target } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -70,7 +71,15 @@ export function AppShell() {
         </div>
 
         <main id="main" className="page-shell flex-1 py-6 pb-28 lg:pb-10">
-          <Outlet />
+          <Suspense
+            fallback={
+              <p role="status" className="py-6">
+                Loading…
+              </p>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
 
         <nav

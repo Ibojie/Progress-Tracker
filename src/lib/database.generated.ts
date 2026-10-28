@@ -495,6 +495,7 @@ export type Database = {
         }
         Returns: string
       }
+      delete_my_account: { Args: { p_confirm: string }; Returns: undefined }
       engine_element_status: {
         Args: { p_element_id: string; p_today: string }
         Returns: {
