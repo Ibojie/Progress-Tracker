@@ -11,7 +11,8 @@ supabase/.branches
 .DS_Store
 playwright-report
 test-results
-.claude
+.claude/*
+!.claude/skills/
 
 # Playwright
 dist-e2e/
