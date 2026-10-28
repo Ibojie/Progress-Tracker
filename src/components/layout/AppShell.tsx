@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Target } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { OfflineBanner } from '@/features/pwa/OfflineBanner';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
@@ -10,9 +10,7 @@ import { NAV_ITEMS } from './nav';
 function Brand() {
   return (
     <span className="flex items-center gap-2 font-bold">
-      <span className="flex size-9 items-center justify-center rounded-sm bg-primary text-primary-foreground">
-        <Target aria-hidden className="size-5" />
-      </span>
+      <BrandMark className="size-9" />
       Progress Tracker
     </span>
   );

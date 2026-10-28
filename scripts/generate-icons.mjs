@@ -1,36 +1,49 @@
-// Renders the app icons from SVG. Run with `npm run icons` after changing the design.
-import { writeFileSync } from 'node:fs';
+// Renders the app icons and brand files from the Progress Tracker seal (owner's design, in the
+// app's primary blue). Run with `npm run icons` after changing the design.
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 
 const BLUE = '#1E40AF';
 
-/** The target mark; `scale` shrinks it inside the canvas (maskable icons need a safe zone). */
-function svg({ rounded, scale }) {
-  const r = rounded ? 112 : 0;
-  const s = scale;
-  const off = (512 - 512 * s) / 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="${r}" fill="${BLUE}"/>
-  <g transform="translate(${off} ${off}) scale(${s})" fill="none" stroke="#fff" stroke-width="40">
-    <circle cx="256" cy="256" r="144"/>
-    <circle cx="256" cy="256" r="64"/>
-  </g>
-  <circle cx="256" cy="256" r="${20 * s}" fill="#fff"/>
-</svg>`;
+/** The mark inside the seal: the ring, the roof (rising progress) and the base line, on a 1024 grid. */
+const MARK = `
+  <circle cx="512" cy="512" r="457" fill="none" stroke="#fff" stroke-width="26"/>
+  <polyline points="283,525 512,365 741,525" fill="none" stroke="#fff" stroke-width="58" stroke-linejoin="miter"/>
+  <rect x="283" y="631" width="458" height="47" fill="#fff"/>`;
+
+/**
+ * shape: 'circle' (the seal itself, transparent corners) or 'square' (full-bleed blue, for maskable
+ * and iOS icons). `scale` shrinks the mark inside the canvas: maskable icons need an 80% safe zone.
+ */
+function svg({ shape, scale = 1 }) {
+  const off = (1024 - 1024 * scale) / 2;
+  const bg = shape === 'circle' ? `<circle cx="512" cy="512" r="512" fill="${BLUE}"/>` : `<rect width="1024" height="1024" fill="${BLUE}"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${bg}<g transform="translate(${off} ${off}) scale(${scale})">${MARK}</g></svg>`;
 }
 
 const out = [
-  // "any" purpose: rounded tile, mark fills it
-  { file: 'public/pwa-192x192.png', size: 192, rounded: true, scale: 1 },
-  { file: 'public/pwa-512x512.png', size: 512, rounded: true, scale: 1 },
-  // maskable: full-bleed, mark inside the central 80% safe zone
-  { file: 'public/maskable-512x512.png', size: 512, rounded: false, scale: 0.7 },
+  // "any" purpose: the round seal
+  { file: 'public/pwa-192x192.png', size: 192, shape: 'circle' },
+  { file: 'public/pwa-512x512.png', size: 512, shape: 'circle' },
+  // maskable (Android adaptive icons): full-bleed blue, the mark inside the central safe zone
+  { file: 'public/maskable-512x512.png', size: 512, shape: 'square', scale: 0.78 },
   // iOS home screen (iOS rounds the corners itself)
-  { file: 'public/apple-touch-icon-180x180.png', size: 180, rounded: false, scale: 0.85 },
+  { file: 'public/apple-touch-icon-180x180.png', size: 180, shape: 'square', scale: 0.92 },
+  // Brand files for stores, Google sign-in and documents
+  { file: 'brand/progress-tracker-logo-64.png', size: 64, shape: 'circle' },
+  { file: 'brand/progress-tracker-logo-120.png', size: 120, shape: 'circle' },
+  { file: 'brand/progress-tracker-logo-512.png', size: 512, shape: 'circle' },
+  { file: 'brand/progress-tracker-logo-1024.png', size: 1024, shape: 'circle' },
 ];
 
+mkdirSync('brand', { recursive: true });
 for (const o of out) {
   const png = new Resvg(svg(o), { fitTo: { mode: 'width', value: o.size } }).render().asPng();
   writeFileSync(o.file, png);
   console.log(`${o.file} (${png.length} bytes)`);
 }
+
+// The browser-tab icon and the master vector.
+writeFileSync('public/favicon.svg', svg({ shape: 'circle' }) + '\n');
+writeFileSync('brand/progress-tracker-logo.svg', svg({ shape: 'circle' }) + '\n');
+console.log('public/favicon.svg, brand/progress-tracker-logo.svg');

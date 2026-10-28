@@ -2,6 +2,14 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.2] - 2026-10-28 - New logo
+
+### Changed
+- **New Progress Tracker logo** (owner's design): a roof over a base line inside a ringed circle, in the app's primary blue (#1E40AF). It replaces the bull's-eye everywhere:
+  - app icons (Android, iPhone and desktop installs) and the browser-tab icon;
+  - the header, the sign-in page and the legal pages.
+- **Brand files in `brand/`:** the master SVG, plus PNGs at 64, 120 (for Google sign-in), 512 and 1024 px. `npm run icons` regenerates them all from one design.
+
 ## [0.7.1] - 2026-10-28 - Legal documents for Google Play
 
 ### Added
