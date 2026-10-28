@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, BellRing } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,22 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const unread = unreadCount(inbox.data);
   useAppBadge(unread);
+  const { refetch } = inbox;
+
+  // A push arriving on this device means there's something new: refresh the bell at once.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'PUSH_RECEIVED') void refetch();
+    };
+    const onVisible = () => document.visibilityState === 'visible' && void refetch();
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refetch]);
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -35,9 +51,12 @@ export function NotificationBell() {
         onClick={() => setOpen(true)}
         aria-label={label}
         title={label}
-        className="relative inline-flex min-h-tap min-w-tap items-center justify-center rounded-full hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className={cn(
+          'relative inline-flex min-h-tap min-w-tap items-center justify-center rounded-full hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+          unread > 0 && 'bg-primary/10 text-primary',
+        )}
       >
-        <Bell aria-hidden className="size-6" />
+        {unread > 0 ? <BellRing aria-hidden className="size-6" /> : <Bell aria-hidden className="size-6" />}
         {unread > 0 && (
           <span
             aria-hidden
