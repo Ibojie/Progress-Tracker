@@ -1,6 +1,7 @@
 import { Fragment, useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Target } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { APP_NAME, DOCUMENTS, EFFECTIVE_DATE, OPERATOR, type Block, type LegalDocument } from '@/features/legal/documents';
@@ -92,9 +93,7 @@ export function LegalPage({ doc }: { doc: LegalDocument }) {
       <header className="glass flex items-center justify-between rounded-none border-x-0 border-t-0 px-4 py-2">
         <Link to={session ? '/settings' : '/login'} className="inline-flex min-h-tap items-center gap-2 font-semibold no-underline">
           <ArrowLeft aria-hidden className="size-5" />
-          <span className="flex size-8 items-center justify-center rounded-sm bg-primary text-primary-foreground">
-            <Target aria-hidden className="size-5" />
-          </span>
+          <BrandMark className="size-8" />
           {APP_NAME}
         </Link>
         <ThemeToggle />

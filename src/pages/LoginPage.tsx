@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { LegalLinks } from '@/features/legal/LegalLinks';
-import { Mail, Target } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -71,9 +72,7 @@ export function LoginPage() {
       </div>
       <div className="glass w-full max-w-md rounded-lg p-6 sm:p-8">
         <div className="mb-6 flex items-center gap-3">
-          <span className="flex size-12 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Target aria-hidden className="size-6" />
-          </span>
+          <BrandMark className="size-12" />
           <div>
             <h1 className="text-h2 font-bold leading-tight">Progress Tracker</h1>
             <p className="text-secondary text-muted-foreground">Never miss a deadline again.</p>
