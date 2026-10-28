@@ -149,7 +149,7 @@ export async function showLocalTest(): Promise<string | null> {
   if (!reg) return 'Notifications aren’t available here.';
   if (Notification.permission !== 'granted') return 'Notifications aren’t allowed for this app. Turn push on first.';
   try {
-    await reg.showNotification('Local test', { body: 'This device can show Progress Tracker notifications.', icon: '/pwa-192x192.png', tag: 'local-test' });
+    await reg.showNotification('Local test', { body: 'This device can show Progress Tracker notifications.', icon: '/pwa-192x192.png', badge: '/badge-96.png', tag: 'local-test' });
     return null;
   } catch (e) {
     return `This device refused to show it: ${(e as Error).message}`;
